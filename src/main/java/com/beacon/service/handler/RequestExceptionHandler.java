@@ -42,6 +42,7 @@ public class RequestExceptionHandler {
                 .errorMessage("Request validation failed")
                 .timestamp(Instant.now())
                 .path(request.getRequestURI())
+                .validationErrors(errors)
                 .build();
 
         return ResponseEntity.badRequest().body(response);

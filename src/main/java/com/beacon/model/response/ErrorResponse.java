@@ -14,7 +14,7 @@ public class ErrorResponse {
     String errorMessage;
     Instant timestamp;
     String path;
-    List<ValidationError> errors;
+    List<ValidationError> validationErrors;
 
     @Data
     @AllArgsConstructor
