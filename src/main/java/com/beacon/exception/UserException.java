@@ -12,4 +12,13 @@ public class UserException {
             super(message);
         }
     }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class UserNotFoundException extends RuntimeException {
+
+        public UserNotFoundException(String message) {
+            super(message);
+        }
+    }
 }
