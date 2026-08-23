@@ -2,6 +2,7 @@ package com.beacon.controller;
 
 import com.beacon.model.request.CreateTemplateRequest;
 import com.beacon.model.response.CreateTemplateResponse;
+import com.beacon.model.response.GetTemplateResponse;
 import com.beacon.service.TemplateService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -27,5 +28,11 @@ public class TemplateController {
         CreateTemplateResponse response = templateService.createTemplate(request);
         URI location = URI.create("/api/v1/templates/" + response.getId());
         return ResponseEntity.created(location).body(response);
+    }
+
+    @GetMapping("/{notificationType}/{channel}")
+    ResponseEntity<GetTemplateResponse> getTemplate(@PathVariable String notificationType, @PathVariable String channel) {
+        GetTemplateResponse template = templateService.getTemplate(notificationType, channel);
+        return ResponseEntity.ok(template);
     }
 }

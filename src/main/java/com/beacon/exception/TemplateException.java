@@ -12,4 +12,13 @@ public class TemplateException {
             super(message);
         }
     }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class TemplateNotFound extends RuntimeException {
+
+        public TemplateNotFound(String message) {
+            super(message);
+        }
+    }
 }

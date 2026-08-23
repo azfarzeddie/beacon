@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
 
+import static com.beacon.exception.TemplateException.TemplateNotFound;
+
 @RestControllerAdvice
 public class TemplateExceptionHandler {
 
@@ -22,5 +24,16 @@ public class TemplateExceptionHandler {
                     .path(request.getRequestURI())
                     .build();
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(TemplateNotFound.class)
+    ResponseEntity<ErrorResponse> handleTemplateNotFoundException(TemplateNotFound e, HttpServletRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .errorCode("TEMPLATE_NOT_FOUND")
+                .errorMessage(e.getLocalizedMessage())
+                .timestamp(Instant.now())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 }
