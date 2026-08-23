@@ -5,10 +5,12 @@ import lombok.Data;
 
 import java.util.UUID;
 
+import static com.beacon.model.Types.Channel;
+
 @Data
 @AllArgsConstructor
 public class CreateTemplateResponse {
     private UUID id;
-    private String channel;
+    private Channel channel;
     private String notificationType;
 }

@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 
+import static com.beacon.model.Types.Channel;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/templates")
@@ -31,7 +33,7 @@ public class TemplateController {
     }
 
     @GetMapping("/{notificationType}/{channel}")
-    ResponseEntity<GetTemplateResponse> getTemplate(@PathVariable String notificationType, @PathVariable String channel) {
+    ResponseEntity<GetTemplateResponse> getTemplate(@PathVariable String notificationType, @PathVariable Channel channel) {
         GetTemplateResponse template = templateService.getTemplate(notificationType, channel);
         return ResponseEntity.ok(template);
     }

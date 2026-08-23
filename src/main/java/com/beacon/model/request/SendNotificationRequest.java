@@ -4,18 +4,21 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.Map;
+
 import static com.beacon.model.Types.Channel;
 
 @Data
-public class CreateTemplateRequest {
+public class SendNotificationRequest {
     @NotNull
     @NotEmpty
-    private String templateBody;
-    @NotNull
-    @NotEmpty
-    private String notificationType;
+    private String userExternalId;
     @NotNull
     @NotEmpty
     private Channel channel;
+    @NotNull
+    @NotEmpty
+    private String notificationType;
+    private Map<String, String> templateVariables;
     private String subject;
 }

@@ -21,4 +21,13 @@ public class TemplateException {
             super(message);
         }
     }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class TemplateNotResolved extends RuntimeException {
+
+        public TemplateNotResolved(String message) {
+            super(message);
+        }
+    }
 }

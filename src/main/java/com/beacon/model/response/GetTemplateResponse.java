@@ -6,11 +6,13 @@ import lombok.Data;
 import java.time.Instant;
 import java.util.UUID;
 
+import static com.beacon.model.Types.Channel;
+
 @Data
 @AllArgsConstructor
 public class GetTemplateResponse {
     private UUID id;
-    private String channel;
+    private Channel channel;
     private String notificationType;
     private String body;
     private String subject;

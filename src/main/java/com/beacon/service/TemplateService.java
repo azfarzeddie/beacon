@@ -1,6 +1,5 @@
 package com.beacon.service;
 
-import com.beacon.exception.TemplateException;
 import com.beacon.model.entity.Template;
 import com.beacon.model.request.CreateTemplateRequest;
 import com.beacon.model.response.CreateTemplateResponse;
@@ -10,9 +9,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import static com.beacon.exception.TemplateException.*;
+import static com.beacon.exception.TemplateException.TemplateAlreadyExists;
+import static com.beacon.exception.TemplateException.TemplateNotFound;
+import static com.beacon.model.Types.Channel;
 
 @Service
 public class TemplateService {
@@ -46,14 +50,14 @@ public class TemplateService {
         return new CreateTemplateResponse(template.getId(), template.getChannel(), template.getNotificationType());
     }
 
-    public GetTemplateResponse getTemplate(String notificationType, String channel) {
+    public GetTemplateResponse getTemplate(String notificationType, Channel channel) {
         Optional<Template> found = templateRepository.findByNotificationTypeAndChannel(notificationType, channel);
         if (found.isEmpty()) {
             throw new TemplateNotFound("No template found for " + notificationType + " and " + channel);
         }
 
         Template template = found.get();
-        GetTemplateResponse response = new GetTemplateResponse(
+        return new GetTemplateResponse(
                 template.getId(),
                 template.getChannel(),
                 template.getNotificationType(),
@@ -62,6 +66,27 @@ public class TemplateService {
                 template.getCreatedAt(),
                 template.getUpdatedAt()
         );
-        return response;
+    }
+
+    public String resolveTemplate(String template, Map<String, String> templateVariables) {
+        String message = template;
+
+        for (Map.Entry<String, String> entry : templateVariables.entrySet()) {
+            String variableName = entry.getKey();
+            String variableValue = entry.getValue();
+
+            message = message.replace("{{" + variableName + "}}", variableValue);
+        }
+
+        Pattern pattern = Pattern.compile("\\{\\{([^{}]+)}}");
+        Matcher matcher = pattern.matcher(message);
+
+        if (matcher.find()) {
+            throw new IllegalArgumentException(
+                    "Unresolved template variable: " + matcher.group(1)
+            );
+        }
+
+        return message;
     }
 }

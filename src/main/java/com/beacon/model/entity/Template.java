@@ -3,10 +3,11 @@ package com.beacon.model.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.generator.Generator;
 
 import java.time.Instant;
 import java.util.UUID;
+
+import static com.beacon.model.Types.Channel;
 
 @Entity
 @Table(name = "templates")
@@ -17,7 +18,7 @@ public class Template {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     @Column(nullable = false)
-    private String channel;
+    private Channel channel;
     @Column(nullable = false)
     private String notificationType;
     @Column(nullable = false, columnDefinition = "TEXT")
