@@ -14,7 +14,6 @@ public class SendNotificationRequest {
     @NotEmpty
     private String userExternalId;
     @NotNull
-    @NotEmpty
     private Channel channel;
     @NotNull
     @NotEmpty

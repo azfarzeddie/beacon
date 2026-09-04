@@ -8,7 +8,6 @@ import com.beacon.repository.TemplateRepository;
 import com.beacon.repository.UserRepository;
 import com.beacon.service.factory.NotificationActionFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -26,7 +25,6 @@ public class NotificationService {
     private final TemplateRepository templateRepository;
     private final TemplateService templateService;
 
-    @Autowired
     public NotificationService(UserRepository userRepository, NotificationActionFactory notificationActionFactory, TemplateRepository templateRepository, TemplateService templateService) {
         this.userRepository = userRepository;
         this.notificationActionFactory = notificationActionFactory;
@@ -54,10 +52,11 @@ public class NotificationService {
                     + request.getNotificationType() + " and " + request.getChannel());
         }
 
-        String template = String.valueOf(templateFound.get());
+        Template template = templateFound.get();
+        String templateBody = template.getBody();
         String message;
         try {
-            message = templateService.resolveTemplate(template, request.getTemplateVariables());
+            message = templateService.resolveTemplate(templateBody, request.getTemplateVariables());
         } catch (Exception e) {
             throw new TemplateNotResolved("Failed to resolve template: " + template
                     + " with variables: " + request.getTemplateVariables().toString());

@@ -1,7 +1,6 @@
 package com.beacon.service.factory;
 
 import com.beacon.service.NotificationAction;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,7 +14,6 @@ import static com.beacon.model.Types.Channel;
 public class NotificationActionFactory {
     private final Map<Channel, NotificationAction> actions;
 
-    @Autowired
     public NotificationActionFactory(List<NotificationAction> notificationActions) {
         this.actions = notificationActions.stream().collect(Collectors.toMap(
                 NotificationAction::getChannel,

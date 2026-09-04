@@ -5,10 +5,8 @@ import com.beacon.model.request.CreateTemplateRequest;
 import com.beacon.model.response.CreateTemplateResponse;
 import com.beacon.model.response.GetTemplateResponse;
 import com.beacon.repository.TemplateRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -22,7 +20,6 @@ import static com.beacon.model.Types.Channel;
 public class TemplateService {
     private final TemplateRepository templateRepository;
 
-    @Autowired
     public TemplateService(TemplateRepository templateRepository) {
         this.templateRepository = templateRepository;
     }
@@ -42,8 +39,6 @@ public class TemplateService {
         if (request.getSubject() != null) {
             template.setSubject(request.getSubject());
         }
-        template.setCreatedAt(Instant.now());
-        template.setUpdatedAt(Instant.now());
 
         templateRepository.save(template);
 

@@ -1,6 +1,5 @@
 package com.beacon.service.handler;
 
-import com.beacon.exception.TemplateException.TemplateAlreadyExists;
 import com.beacon.model.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -10,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
 
+import static com.beacon.exception.TemplateException.TemplateAlreadyExists;
 import static com.beacon.exception.TemplateException.TemplateNotFound;
 
 @RestControllerAdvice

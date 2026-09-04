@@ -3,6 +3,8 @@ package com.beacon.model.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -23,7 +25,11 @@ public class User {
     @Column(unique = true)
     private String email;
     private String phone;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
+    @UpdateTimestamp
+    @Column(nullable = false)
     private Instant updatedAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -31,8 +37,6 @@ public class User {
 
     public void addDeviceToken(DeviceToken deviceToken) {
         deviceTokens.add(deviceToken);
-        deviceToken.setCreatedAt(Instant.now());
-        deviceToken.setUpdatedAt(Instant.now());
         deviceToken.setUser(this);
     }
 

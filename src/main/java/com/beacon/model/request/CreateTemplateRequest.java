@@ -15,7 +15,6 @@ public class CreateTemplateRequest {
     @NotEmpty
     private String notificationType;
     @NotNull
-    @NotEmpty
     private Channel channel;
     private String subject;
 }

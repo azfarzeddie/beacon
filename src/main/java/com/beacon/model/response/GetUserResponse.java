@@ -6,8 +6,6 @@ import lombok.Data;
 import java.time.Instant;
 import java.util.List;
 
-import static com.beacon.model.request.CreateUserRequest.DeviceToken;
-
 @Data
 @Builder
 public class GetUserResponse {
@@ -16,7 +14,7 @@ public class GetUserResponse {
     String externalId;
     String email;
     String phone;
-    List<DeviceToken> deviceTokens;
+    List<DeviceTokenResponse> deviceTokens;
     Instant createdAt;
     Instant updatedAt;
 }

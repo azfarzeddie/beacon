@@ -6,9 +6,13 @@ import com.beacon.model.response.GetTemplateResponse;
 import com.beacon.service.TemplateService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 
@@ -20,7 +24,6 @@ import static com.beacon.model.Types.Channel;
 public class TemplateController {
     private final TemplateService templateService;
 
-    @Autowired
     public TemplateController(TemplateService templateService) {
         this.templateService = templateService;
     }
