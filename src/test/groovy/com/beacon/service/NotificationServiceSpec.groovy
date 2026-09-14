@@ -4,6 +4,7 @@ import com.beacon.exception.NotificationException
 import com.beacon.exception.TemplateException
 import com.beacon.exception.UserException
 import com.beacon.model.NotificationContext
+import com.beacon.model.entity.DeviceToken
 import com.beacon.model.entity.Template
 import com.beacon.model.entity.User
 import com.beacon.model.request.SendNotificationRequest
@@ -211,6 +212,35 @@ class NotificationServiceSpec extends Specification {
         0 * templateService.resolveTemplate(null, _)
         1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
         1 * action.send({ NotificationContext ctx -> ctx.subject == null }) >> true
+        noExceptionThrown()
+    }
+
+    def "sendSingleNotification includes the user's device tokens in the notification context"() {
+        given:
+        def user = aUser()
+        user.deviceTokens = [
+                new DeviceToken(token: "device-token-1"),
+                new DeviceToken(token: "device-token-2")
+        ]
+        def request = new SendNotificationRequest(
+                userExternalId: "ext-1",
+                channel: Channel.PUSH,
+                notificationType: "welcome",
+                templateVariables: [name: "Ada"]
+        )
+        def action = Mock(NotificationAction)
+        def template = new Template(channel: Channel.PUSH, notificationType: "welcome", body: "Hello {{name}}")
+
+        when:
+        notificationService.sendSingleNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.PUSH) >> Optional.empty()
+        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.PUSH) >> Optional.of(template)
+        1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
+        1 * notificationActionFactory.getAction(Channel.PUSH) >> action
+        1 * action.send({ NotificationContext ctx -> ctx.deviceTokens == ["device-token-1", "device-token-2"] }) >> true
         noExceptionThrown()
     }
 

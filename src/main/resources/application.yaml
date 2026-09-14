@@ -39,3 +39,14 @@ spring:
       access-key: ${SMS_AWS_ACCESS_KEY:}
       secret-key: ${SMS_AWS_SECRET_KEY:}
       region: ${SMS_AWS_REGION:us-east-1}
+
+  push:
+    provider: ${PUSH_PROVIDER:firebase} # could also be aws or onesignal
+    firebase:
+      credentials-path: ${PUSH_FIREBASE_CREDENTIALS_PATH:}
+    aws:
+      platform-application-arn: ${PUSH_AWS_PLATFORM_APPLICATION_ARN:}
+    onesignal:
+      base-url: ${PUSH_ONESIGNAL_BASE_URL:https://api.onesignal.com}
+      app-id: ${PUSH_ONESIGNAL_APP_ID:}
+      api-key: ${PUSH_ONESIGNAL_API_KEY:}

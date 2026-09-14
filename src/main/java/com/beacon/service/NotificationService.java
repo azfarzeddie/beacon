@@ -3,6 +3,7 @@ package com.beacon.service;
 import com.beacon.exception.NotificationException;
 import com.beacon.model.NotificationContext;
 import com.beacon.model.Types;
+import com.beacon.model.entity.DeviceToken;
 import com.beacon.model.entity.Template;
 import com.beacon.model.entity.User;
 import com.beacon.model.entity.UserPreference;
@@ -86,6 +87,7 @@ public class NotificationService {
                 .email(user.getEmail())
                 .message(message)
                 .subject(subject)
+                .deviceTokens(user.getDeviceTokens().stream().map(DeviceToken::getToken).toList())
                 .build();
         boolean result = action.send(context);
         if (!result) {
