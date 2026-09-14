@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 
 import static com.beacon.exception.NotificationException.NotificationDispatchException;
+import static com.beacon.exception.NotificationException.NotificationNotAllowed;
 
 @RestControllerAdvice
 public class NotificationExceptionHandler {
@@ -23,5 +24,16 @@ public class NotificationExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler(NotificationNotAllowed.class)
+    ResponseEntity<ErrorResponse> handleNotificationNotAllowedException(NotificationNotAllowed e, HttpServletRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .errorCode("NOTIFICATION_NOT_ALLOWED")
+                .errorMessage(e.getLocalizedMessage())
+                .timestamp(Instant.now())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 }

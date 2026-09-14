@@ -1,9 +1,13 @@
 package com.beacon.service;
 
+import com.beacon.exception.NotificationException;
 import com.beacon.model.NotificationContext;
+import com.beacon.model.Types;
 import com.beacon.model.entity.Template;
 import com.beacon.model.entity.User;
+import com.beacon.model.entity.UserPreference;
 import com.beacon.model.request.SendNotificationRequest;
+import com.beacon.repository.PreferenceRepository;
 import com.beacon.repository.TemplateRepository;
 import com.beacon.repository.UserRepository;
 import com.beacon.service.factory.NotificationActionFactory;
@@ -24,12 +28,16 @@ public class NotificationService {
     private final NotificationActionFactory notificationActionFactory;
     private final TemplateRepository templateRepository;
     private final TemplateService templateService;
+    private final PreferenceRepository preferenceRepository;
 
-    public NotificationService(UserRepository userRepository, NotificationActionFactory notificationActionFactory, TemplateRepository templateRepository, TemplateService templateService) {
+    public NotificationService(UserRepository userRepository, NotificationActionFactory notificationActionFactory,
+                               TemplateRepository templateRepository, TemplateService templateService,
+                               PreferenceRepository preferenceRepository) {
         this.userRepository = userRepository;
         this.notificationActionFactory = notificationActionFactory;
         this.templateRepository = templateRepository;
         this.templateService = templateService;
+        this.preferenceRepository = preferenceRepository;
     }
 
     public void sendSingleNotification(SendNotificationRequest request) throws TemplateNotFound {
@@ -42,8 +50,13 @@ public class NotificationService {
 
         User user = found.get();
         // check user preferences for DnD and applicable channels
-        // TODO: Add APIs for user preferences
-        // for now, assuming that the user has allowed sending all notifications
+        Optional<UserPreference> preference = preferenceRepository.findByUserIdAndNotificationTypeAndChannel(
+                user.getId(), request.getNotificationType(), request.getChannel());
+        if (preference.isPresent() && preference.get().getPreference() == Types.PreferenceType.DISABLED) {
+            throw new NotificationException.NotificationNotAllowed("User with externalId: " + request.getUserExternalId()
+                    + " has disabled all notifications for type " + request.getNotificationType() + " on channel "
+                    + request.getChannel().toString());
+        }
 
         // fetch the template for this combination of notificationType and channel
         Optional<Template> templateFound = templateRepository.findByNotificationTypeAndChannel(request.getNotificationType(), request.getChannel());

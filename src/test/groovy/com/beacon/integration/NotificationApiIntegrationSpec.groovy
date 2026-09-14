@@ -3,6 +3,8 @@ package com.beacon.integration
 import com.beacon.model.NotificationContext
 import com.beacon.model.entity.Template
 import com.beacon.model.entity.User
+import com.beacon.model.entity.UserPreference
+import com.beacon.repository.PreferenceRepository
 import com.beacon.repository.TemplateRepository
 import com.beacon.repository.UserRepository
 import com.beacon.service.EmailNotificationAction
@@ -14,6 +16,7 @@ import org.mockito.Mockito
 import org.mockito.invocation.Invocation
 
 import static com.beacon.model.Types.Channel
+import static com.beacon.model.Types.PreferenceType
 import static org.mockito.ArgumentMatchers.any
 import static org.mockito.Mockito.when
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -34,6 +37,9 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
 
     @Autowired
     TemplateRepository templateRepository
+
+    @Autowired
+    PreferenceRepository preferenceRepository
 
     @Autowired
     ObjectMapper objectMapper
@@ -118,6 +124,35 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
                 .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath('$.errorCode').value("NOTIFICATION_DISPATCH_FAILED"))
+    }
+
+    def "POST /api/v1/notifications returns 403 when the user has disabled the notification type and channel"() {
+        given:
+        def user = userRepository.save(new User(externalId: "ext-notify-4", name: "Ada", email: "ada4@example.com"))
+        templateRepository.save(new Template(
+                channel: Channel.EMAIL,
+                notificationType: "welcome",
+                body: "Hello {{name}}, welcome to Beacon!"
+        ))
+        preferenceRepository.save(new UserPreference(
+                userId: user.id,
+                notificationType: "welcome",
+                channel: Channel.EMAIL,
+                preference: PreferenceType.DISABLED
+        ))
+        def payload = [
+                userExternalId   : "ext-notify-4",
+                channel          : "EMAIL",
+                notificationType : "welcome",
+                templateVariables: [name: "Ada"]
+        ]
+
+        expect:
+        mockMvc.perform(post("/api/v1/notifications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath('$.errorCode').value("NOTIFICATION_NOT_ALLOWED"))
     }
 
     def "POST /api/v1/notifications returns 400 for an invalid payload"() {

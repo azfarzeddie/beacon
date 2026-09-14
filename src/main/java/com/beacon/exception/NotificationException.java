@@ -7,4 +7,10 @@ public class NotificationException {
             super(message);
         }
     }
+
+    public static class NotificationNotAllowed extends RuntimeException {
+        public NotificationNotAllowed(String message) {
+            super(message);
+        }
+    }
 }

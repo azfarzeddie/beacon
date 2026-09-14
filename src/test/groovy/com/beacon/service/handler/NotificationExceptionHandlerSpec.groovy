@@ -24,4 +24,19 @@ class NotificationExceptionHandlerSpec extends Specification {
         response.body.errorMessage == "Failed to send notification for welcome at EMAIL. Please try again later."
         response.body.path == "/api/v1/notifications"
     }
+
+    def "maps NotificationNotAllowed to a 403 FORBIDDEN error response"() {
+        given:
+        def exception = new NotificationException.NotificationNotAllowed(
+                "User with externalId: ext-1 has disabled all notifications for type welcome on channel EMAIL")
+
+        when:
+        def response = handler.handleNotificationNotAllowedException(exception, request)
+
+        then:
+        response.statusCode == HttpStatus.FORBIDDEN
+        response.body.errorCode == "NOTIFICATION_NOT_ALLOWED"
+        response.body.errorMessage == "User with externalId: ext-1 has disabled all notifications for type welcome on channel EMAIL"
+        response.body.path == "/api/v1/notifications"
+    }
 }

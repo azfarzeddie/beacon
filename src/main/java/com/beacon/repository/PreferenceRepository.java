@@ -14,4 +14,6 @@ public interface PreferenceRepository extends JpaRepository<UserPreference, UUID
     Optional<UserPreference> findByIdAndUserId(UUID id, Long userId);
 
     Optional<List<UserPreference>> findByUserId(Long id);
+
+    Optional<UserPreference> findByUserIdAndNotificationTypeAndChannel(Long userId, String notificationType, Channel channel);
 }

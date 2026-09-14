@@ -7,6 +7,8 @@ import com.beacon.model.NotificationContext
 import com.beacon.model.entity.Template
 import com.beacon.model.entity.User
 import com.beacon.model.request.SendNotificationRequest
+import com.beacon.model.entity.UserPreference
+import com.beacon.repository.PreferenceRepository
 import com.beacon.repository.TemplateRepository
 import com.beacon.repository.UserRepository
 import com.beacon.service.factory.NotificationActionFactory
@@ -14,6 +16,7 @@ import spock.lang.Specification
 import spock.lang.Subject
 
 import static com.beacon.model.Types.Channel
+import static com.beacon.model.Types.PreferenceType
 
 class NotificationServiceSpec extends Specification {
 
@@ -21,10 +24,11 @@ class NotificationServiceSpec extends Specification {
     TemplateRepository templateRepository = Mock()
     NotificationActionFactory notificationActionFactory = Mock()
     TemplateService templateService = Mock()
+    PreferenceRepository preferenceRepository = Mock()
 
     @Subject
     NotificationService notificationService =
-            new NotificationService(userRepository, notificationActionFactory, templateRepository, templateService)
+            new NotificationService(userRepository, notificationActionFactory, templateRepository, templateService, preferenceRepository)
 
     private static User aUser() {
         new User(id: 1L, externalId: "ext-1", name: "Ada", email: "ada@example.com", phone: "555-0100")
@@ -50,6 +54,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
@@ -69,6 +74,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("missing") >> Optional.empty()
+        0 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(*_)
         0 * templateRepository.findByNotificationTypeAndChannel(*_)
         thrown(UserException.UserNotFoundException)
     }
@@ -82,6 +88,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "otp", Channel.SMS) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.empty()
         0 * notificationActionFactory.getAction(_)
         thrown(TemplateException.TemplateNotFound)
@@ -101,6 +108,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate(*_) >> { throw new IllegalArgumentException("Unresolved template variable: name") }
         0 * notificationActionFactory.getAction(_)
@@ -122,10 +130,76 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate(*_) >> "Hello Ada"
         1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
         1 * action.send(_) >> false
         thrown(NotificationException.NotificationDispatchException)
+    }
+
+    def "sendSingleNotification proceeds when the user has an ENABLED preference for the type and channel"() {
+        given:
+        def request = new SendNotificationRequest(
+                userExternalId: "ext-1",
+                channel: Channel.EMAIL,
+                notificationType: "welcome",
+                templateVariables: [name: "Ada"],
+                subject: "Welcome!"
+        )
+        def action = Mock(NotificationAction)
+        def preference = new UserPreference(userId: 1L, notificationType: "welcome", channel: Channel.EMAIL, preference: PreferenceType.ENABLED)
+
+        when:
+        notificationService.sendSingleNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
+        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
+        1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
+        1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
+        1 * action.send(_) >> true
+        noExceptionThrown()
+    }
+
+    def "sendSingleNotification sends the notification when no preference exists for the user, type, and channel"() {
+        given:
+        def request = new SendNotificationRequest(
+                userExternalId: "ext-1",
+                channel: Channel.EMAIL,
+                notificationType: "welcome",
+                templateVariables: [name: "Ada"],
+                subject: "Welcome!"
+        )
+        def action = Mock(NotificationAction)
+
+        when:
+        notificationService.sendSingleNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
+        1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
+        1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
+        1 * action.send(_) >> true
+        noExceptionThrown()
+    }
+
+    def "sendSingleNotification throws NotificationNotAllowed when the user has disabled the type and channel"() {
+        given:
+        def request = new SendNotificationRequest(userExternalId: "ext-1", channel: Channel.EMAIL, notificationType: "welcome")
+        def preference = new UserPreference(userId: 1L, notificationType: "welcome", channel: Channel.EMAIL, preference: PreferenceType.DISABLED)
+
+        when:
+        notificationService.sendSingleNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
+        0 * templateRepository.findByNotificationTypeAndChannel(*_)
+        0 * notificationActionFactory.getAction(_)
+        thrown(NotificationException.NotificationNotAllowed)
     }
 }
