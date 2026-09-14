@@ -27,3 +27,15 @@ spring:
           auth: true
         starttls:
           enable: true
+
+  sms:
+    provider: ${SMS_PROVIDER:twilio} # could also be aws
+    twilio:
+      base-url: ${SMS_TWILIO_BASE_URL:https://api.twilio.com/2010-04-01}
+      account-sid: ${SMS_TWILIO_ACCOUNT_SID:}
+      auth-token: ${SMS_TWILIO_AUTH_TOKEN:}
+      from-number: ${SMS_TWILIO_FROM_NUMBER:}
+    aws:
+      access-key: ${SMS_AWS_ACCESS_KEY:}
+      secret-key: ${SMS_AWS_SECRET_KEY:}
+      region: ${SMS_AWS_REGION:us-east-1}
