@@ -14,7 +14,12 @@ import spock.lang.Specification
  * transaction that is rolled back afterwards, so specs never need to clean
  * up the rows they create.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = [
+        "EMAIL_SERVER_HOST=localhost",
+        "EMAIL_SERVER_PORT=3025",
+        "EMAIL_SERVER_USERNAME=test@example.com",
+        "EMAIL_SERVER_PASSWORD=test"
+])
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration)
 @Transactional

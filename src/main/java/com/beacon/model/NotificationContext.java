@@ -12,4 +12,5 @@ public class NotificationContext {
     private String template;
     private String message;
     private String subject;
+    private String notificationType;
 }

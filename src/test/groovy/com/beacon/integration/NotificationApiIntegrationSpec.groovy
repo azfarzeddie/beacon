@@ -18,7 +18,7 @@ import org.mockito.invocation.Invocation
 import static com.beacon.model.Types.Channel
 import static com.beacon.model.Types.PreferenceType
 import static org.mockito.ArgumentMatchers.any
-import static org.mockito.Mockito.when
+import static org.mockito.Mockito.doReturn
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -56,7 +56,7 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
                 body: "Hello {{name}}, welcome to Beacon!",
                 subject: "Welcome"
         ))
-        when(emailNotificationAction.send(any())).thenReturn(true)
+        doReturn(true).when(emailNotificationAction).send(any())
 
         def payload = [
                 userExternalId   : "ext-notify-1",

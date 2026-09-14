@@ -67,9 +67,12 @@ public class NotificationService {
 
         Template template = templateFound.get();
         String templateBody = template.getBody();
-        String message;
+        String message, subject = null;
         try {
             message = templateService.resolveTemplate(templateBody, request.getTemplateVariables());
+            if (request.getSubject() != null) {
+                subject = templateService.resolveTemplate(request.getSubject(), request.getTemplateVariables());
+            }
         } catch (Exception e) {
             throw new TemplateNotResolved("Failed to resolve template: " + template
                     + " with variables: " + request.getTemplateVariables().toString());
@@ -82,7 +85,7 @@ public class NotificationService {
                 .phone(user.getPhone())
                 .email(user.getEmail())
                 .message(message)
-                .subject(request.getSubject())
+                .subject(subject)
                 .build();
         boolean result = action.send(context);
         if (!result) {

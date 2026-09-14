@@ -57,6 +57,7 @@ class NotificationServiceSpec extends Specification {
         1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
+        1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
         1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
         1 * action.send({ NotificationContext ctx ->
             ctx.name == "Ada" && ctx.email == "ada@example.com" && ctx.phone == "555-0100" &&
@@ -158,6 +159,7 @@ class NotificationServiceSpec extends Specification {
         1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
+        1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
         1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
         1 * action.send(_) >> true
         noExceptionThrown()
@@ -182,8 +184,33 @@ class NotificationServiceSpec extends Specification {
         1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
+        1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
         1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
         1 * action.send(_) >> true
+        noExceptionThrown()
+    }
+
+    def "sendSingleNotification leaves the subject unresolved when the request does not provide one"() {
+        given:
+        def request = new SendNotificationRequest(
+                userExternalId: "ext-1",
+                channel: Channel.EMAIL,
+                notificationType: "welcome",
+                templateVariables: [name: "Ada"]
+        )
+        def action = Mock(NotificationAction)
+
+        when:
+        notificationService.sendSingleNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
+        1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
+        0 * templateService.resolveTemplate(null, _)
+        1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
+        1 * action.send({ NotificationContext ctx -> ctx.subject == null }) >> true
         noExceptionThrown()
     }
 
