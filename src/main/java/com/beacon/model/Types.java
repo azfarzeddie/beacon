@@ -8,4 +8,8 @@ public class Types {
     public enum Channel {
         SMS, EMAIL, PUSH
     }
+
+    public enum PreferenceType {
+        ENABLED, DISABLED
+    }
 }
