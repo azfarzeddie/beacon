@@ -19,5 +19,4 @@ public class SendNotificationRequest {
     @NotEmpty
     private String notificationType;
     private Map<String, String> templateVariables;
-    private String subject;
 }

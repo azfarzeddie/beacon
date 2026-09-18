@@ -1,6 +1,8 @@
 package com.beacon.controller;
 
+import com.beacon.model.request.BulkNotificationRequest;
 import com.beacon.model.request.SendNotificationRequest;
+import com.beacon.model.response.BulkNotificationResponse;
 import com.beacon.service.NotificationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +22,13 @@ public class NotificationController {
 
     @PostMapping
     ResponseEntity<Void> sendNotification(@Valid @RequestBody SendNotificationRequest request) {
-        notificationService.sendSingleNotification(request);
+        notificationService.sendNotification(request);
         return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/bulk")
+    ResponseEntity<BulkNotificationResponse> sendBulkNotifications(@Valid @RequestBody BulkNotificationRequest request) {
+        BulkNotificationResponse response = notificationService.sendBulkNotifications(request);
+        return ResponseEntity.accepted().body(response);
     }
 }
