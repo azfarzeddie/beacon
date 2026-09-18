@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
 
+import static com.beacon.exception.NotificationException.BulkNotificationJobNotFound;
 import static com.beacon.exception.NotificationException.NotificationDispatchException;
 import static com.beacon.exception.NotificationException.NotificationNotAllowed;
 
@@ -35,5 +36,16 @@ public class NotificationExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(BulkNotificationJobNotFound.class)
+    ResponseEntity<ErrorResponse> handleBulkNotificationJobNotFoundException(BulkNotificationJobNotFound e, HttpServletRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .errorCode("BULK_NOTIFICATION_JOB_NOT_FOUND")
+                .errorMessage(e.getLocalizedMessage())
+                .timestamp(Instant.now())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 }

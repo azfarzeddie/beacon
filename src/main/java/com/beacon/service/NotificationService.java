@@ -1,5 +1,6 @@
 package com.beacon.service;
 
+import com.beacon.exception.NotificationException.BulkNotificationJobNotFound;
 import com.beacon.exception.NotificationException.NotificationNotAllowed;
 import com.beacon.model.MessageDetails;
 import com.beacon.model.NotificationContext;
@@ -8,6 +9,7 @@ import com.beacon.model.entity.*;
 import com.beacon.model.request.BulkNotificationRequest;
 import com.beacon.model.request.SendNotificationRequest;
 import com.beacon.model.response.BulkNotificationResponse;
+import com.beacon.model.response.GetBulkNotificationJobResponse;
 import com.beacon.repository.*;
 import com.beacon.repository.NotificationActionRecordRepository.StatusCount;
 import com.beacon.service.factory.NotificationActionFactory;
@@ -144,6 +146,25 @@ public class NotificationService {
                 .start(() -> runJob(job, request.getNotifications()));
 
         return new BulkNotificationResponse(job.getId());
+    }
+
+    public GetBulkNotificationJobResponse getBulkNotificationJob(UUID jobId) {
+        Optional<BulkNotificationJob> found = jobRepository.findById(jobId);
+        if (found.isEmpty()) {
+            throw new BulkNotificationJobNotFound("No bulk notification job with id " + jobId + " exists.");
+        }
+
+        BulkNotificationJob job = found.get();
+        return new GetBulkNotificationJobResponse(
+                job.getId(),
+                job.getStatus(),
+                job.getActionCount(),
+                job.getSuccessCount(),
+                job.getFailureCount(),
+                job.getSkippedCount(),
+                job.getCreatedAt(),
+                job.getUpdatedAt(),
+                job.getCompletedAt());
     }
 
     private void runJob(BulkNotificationJob job, List<SendNotificationRequest> notifications) {

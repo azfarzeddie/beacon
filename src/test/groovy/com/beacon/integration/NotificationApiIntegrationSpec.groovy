@@ -1,9 +1,11 @@
 package com.beacon.integration
 
 import com.beacon.model.NotificationContext
+import com.beacon.model.entity.BulkNotificationJob
 import com.beacon.model.entity.Template
 import com.beacon.model.entity.User
 import com.beacon.model.entity.UserPreference
+import com.beacon.repository.BulkNotificationJobRepository
 import com.beacon.repository.PreferenceRepository
 import com.beacon.repository.TemplateRepository
 import com.beacon.repository.UserRepository
@@ -15,10 +17,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.mockito.Mockito
 import org.mockito.invocation.Invocation
 
+import java.time.Instant
+
 import static com.beacon.model.Types.Channel
+import static com.beacon.model.Types.JobStatus
 import static com.beacon.model.Types.PreferenceType
 import static org.mockito.ArgumentMatchers.any
 import static org.mockito.Mockito.doReturn
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -40,6 +46,9 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
 
     @Autowired
     PreferenceRepository preferenceRepository
+
+    @Autowired
+    BulkNotificationJobRepository jobRepository
 
     @Autowired
     ObjectMapper objectMapper
@@ -165,5 +174,58 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
                 .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath('$.errorCode').value("VALIDATION_ERROR"))
+    }
+
+    def "GET /api/v1/notifications/bulk/{jobId} returns the job's status and counts"() {
+        given:
+        // flushed so Hibernate populates the @CreationTimestamp / @UpdateTimestamp columns
+        def job = jobRepository.saveAndFlush(new BulkNotificationJob(
+                actionCount: 10,
+                successCount: 7,
+                failureCount: 2,
+                skippedCount: 1,
+                status: JobStatus.PARTIALLY_COMPLETED,
+                completedAt: Instant.parse("2026-09-18T10:15:30Z")
+        ))
+
+        expect:
+        mockMvc.perform(get("/api/v1/notifications/bulk/{jobId}", job.id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath('$.jobId').value(job.id.toString()))
+                .andExpect(jsonPath('$.status').value("PARTIALLY_COMPLETED"))
+                .andExpect(jsonPath('$.actionCount').value(10))
+                .andExpect(jsonPath('$.successCount').value(7))
+                .andExpect(jsonPath('$.failureCount').value(2))
+                .andExpect(jsonPath('$.skippedCount').value(1))
+                .andExpect(jsonPath('$.createdAt').exists())
+                .andExpect(jsonPath('$.updatedAt').exists())
+                .andExpect(jsonPath('$.completedAt').exists())
+    }
+
+    def "GET /api/v1/notifications/bulk/{jobId} reports a pending job with zeroed counts and no completedAt"() {
+        given:
+        def job = jobRepository.saveAndFlush(new BulkNotificationJob(actionCount: 3, status: JobStatus.PENDING))
+
+        expect:
+        mockMvc.perform(get("/api/v1/notifications/bulk/{jobId}", job.id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath('$.status').value("PENDING"))
+                .andExpect(jsonPath('$.actionCount').value(3))
+                .andExpect(jsonPath('$.successCount').value(0))
+                .andExpect(jsonPath('$.failureCount').value(0))
+                .andExpect(jsonPath('$.skippedCount').value(0))
+                .andExpect(jsonPath('$.completedAt').doesNotExist())
+    }
+
+    def "GET /api/v1/notifications/bulk/{jobId} returns 404 when no job has that id"() {
+        given:
+        def unknownJobId = UUID.randomUUID()
+
+        expect:
+        mockMvc.perform(get("/api/v1/notifications/bulk/{jobId}", unknownJobId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath('$.errorCode').value("BULK_NOTIFICATION_JOB_NOT_FOUND"))
+                .andExpect(jsonPath('$.errorMessage').value("No bulk notification job with id ${unknownJobId} exists.".toString()))
+                .andExpect(jsonPath('$.path').value("/api/v1/notifications/bulk/${unknownJobId}".toString()))
     }
 }

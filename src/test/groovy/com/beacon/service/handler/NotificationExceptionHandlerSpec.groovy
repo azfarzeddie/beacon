@@ -39,4 +39,20 @@ class NotificationExceptionHandlerSpec extends Specification {
         response.body.errorMessage == "User with externalId: ext-1 has disabled all notifications for type welcome on channel EMAIL"
         response.body.path == "/api/v1/notifications"
     }
+
+    def "maps BulkNotificationJobNotFound to a 404 NOT_FOUND error response"() {
+        given:
+        def jobId = UUID.randomUUID()
+        def exception = new NotificationException.BulkNotificationJobNotFound(
+                "No bulk notification job with id ${jobId} exists.")
+
+        when:
+        def response = handler.handleBulkNotificationJobNotFoundException(exception, request)
+
+        then:
+        response.statusCode == HttpStatus.NOT_FOUND
+        response.body.errorCode == "BULK_NOTIFICATION_JOB_NOT_FOUND"
+        response.body.errorMessage == "No bulk notification job with id ${jobId} exists."
+        response.body.path == "/api/v1/notifications"
+    }
 }

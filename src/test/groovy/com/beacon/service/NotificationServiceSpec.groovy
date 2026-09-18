@@ -12,6 +12,8 @@ import com.beacon.service.factory.NotificationActionFactory
 import spock.lang.Specification
 import spock.lang.Subject
 
+import java.time.Instant
+
 import static com.beacon.model.Types.*
 
 class NotificationServiceSpec extends Specification {
@@ -394,5 +396,72 @@ class NotificationServiceSpec extends Specification {
         saved.status == ActionStatus.FAILED
         saved.failureReason.contains("Failed to send notification")
         saved.messageDetails == null
+    }
+
+    def "getBulkNotificationJob returns the job's status, counts and timestamps"() {
+        given:
+        def jobId = UUID.randomUUID()
+        def completedAt = Instant.parse("2026-09-18T10:15:30Z")
+        def job = new BulkNotificationJob(
+                id: jobId,
+                status: JobStatus.PARTIALLY_COMPLETED,
+                actionCount: 10,
+                successCount: 7,
+                failureCount: 2,
+                skippedCount: 1,
+                createdAt: completedAt.minusSeconds(60),
+                updatedAt: completedAt,
+                completedAt: completedAt
+        )
+
+        when:
+        def response = notificationService.getBulkNotificationJob(jobId)
+
+        then:
+        1 * jobRepository.findById(jobId) >> Optional.of(job)
+
+        and:
+        response.jobId == jobId
+        response.status == JobStatus.PARTIALLY_COMPLETED
+        response.actionCount == 10
+        response.successCount == 7
+        response.failureCount == 2
+        response.skippedCount == 1
+        response.createdAt == completedAt.minusSeconds(60)
+        response.updatedAt == completedAt
+        response.completedAt == completedAt
+    }
+
+    def "getBulkNotificationJob reports a job that is still running with no completedAt"() {
+        given:
+        def jobId = UUID.randomUUID()
+        def job = new BulkNotificationJob(id: jobId, status: JobStatus.IN_PROGRESS, actionCount: 5)
+
+        when:
+        def response = notificationService.getBulkNotificationJob(jobId)
+
+        then:
+        1 * jobRepository.findById(jobId) >> Optional.of(job)
+
+        and:
+        response.status == JobStatus.IN_PROGRESS
+        response.actionCount == 5
+        response.successCount == 0
+        response.failureCount == 0
+        response.skippedCount == 0
+        response.completedAt == null
+    }
+
+    def "getBulkNotificationJob throws BulkNotificationJobNotFound when no job has that id"() {
+        given:
+        def jobId = UUID.randomUUID()
+
+        when:
+        notificationService.getBulkNotificationJob(jobId)
+
+        then:
+        1 * jobRepository.findById(jobId) >> Optional.empty()
+        def e = thrown(NotificationException.BulkNotificationJobNotFound)
+        e.message == "No bulk notification job with id ${jobId} exists."
     }
 }

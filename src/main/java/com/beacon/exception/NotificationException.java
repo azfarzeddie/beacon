@@ -13,4 +13,10 @@ public class NotificationException {
             super(message);
         }
     }
+
+    public static class BulkNotificationJobNotFound extends RuntimeException {
+        public BulkNotificationJobNotFound(String message) {
+            super(message);
+        }
+    }
 }
