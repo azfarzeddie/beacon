@@ -53,7 +53,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
@@ -74,7 +74,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("missing") >> Optional.empty()
-        0 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(*_)
+        0 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(*_)
         0 * templateRepository.findByNotificationTypeAndChannel(*_)
         thrown(UserException.UserNotFoundException)
     }
@@ -88,7 +88,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "otp", Channel.SMS) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "otp", Channel.SMS) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.empty()
         0 * notificationActionFactory.getAction(_)
         thrown(TemplateException.TemplateNotFound)
@@ -108,7 +108,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate(*_) >> { throw new IllegalArgumentException("Unresolved template variable: name") }
         0 * notificationActionFactory.getAction(_)
@@ -130,7 +130,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
@@ -155,7 +155,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
@@ -179,7 +179,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
@@ -203,7 +203,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
@@ -228,7 +228,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(template)
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         0 * templateService.resolveTemplate(null, _)
@@ -258,7 +258,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.PUSH) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.PUSH) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.PUSH) >> Optional.of(template)
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * notificationActionFactory.getAction(Channel.PUSH) >> action
@@ -276,7 +276,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
         0 * templateRepository.findByNotificationTypeAndChannel(*_)
         0 * notificationActionFactory.getAction(_)
         thrown(NotificationException.NotificationNotAllowed)
@@ -298,7 +298,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"
@@ -334,7 +334,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.PUSH) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.PUSH) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.PUSH) >> Optional.of(template)
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * notificationActionFactory.getAction(Channel.PUSH) >> action
@@ -357,7 +357,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.of(preference)
         1 * actionRepository.save(_) >> { NotificationActionRecord record -> saved = record }
         thrown(NotificationException.NotificationNotAllowed)
 
@@ -383,7 +383,7 @@ class NotificationServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
-        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
         1 * templateService.resolveTemplate("Hello {{name}}", [name: "Ada"]) >> "Hello Ada"
         1 * templateService.resolveTemplate("Welcome!", [name: "Ada"]) >> "Welcome!"

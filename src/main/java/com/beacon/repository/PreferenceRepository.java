@@ -11,9 +11,11 @@ import java.util.UUID;
 public interface PreferenceRepository extends JpaRepository<UserPreference, UUID> {
     Optional<UserPreference> findByNotificationTypeAndChannel(String notificationType, Channel channel);
 
-    Optional<UserPreference> findByIdAndUserId(UUID id, Long userId);
+    Optional<UserPreference> findByIdAndUserIdAndActiveTrue(UUID id, Long userId);
 
-    Optional<List<UserPreference>> findByUserId(Long id);
+    List<UserPreference> findByUserIdAndActiveTrue(Long userId);
 
     Optional<UserPreference> findByUserIdAndNotificationTypeAndChannel(Long userId, String notificationType, Channel channel);
+
+    Optional<UserPreference> findByUserIdAndNotificationTypeAndChannelAndActiveTrue(Long userId, String notificationType, Channel channel);
 }

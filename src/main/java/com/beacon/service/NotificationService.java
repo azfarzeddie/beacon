@@ -90,7 +90,8 @@ public class NotificationService {
 
         User user = found.get();
         // check user preferences for DnD and applicable channels
-        Optional<UserPreference> preference = preferenceRepository.findByUserIdAndNotificationTypeAndChannel(
+        // a soft-deleted preference no longer applies, so it must not keep blocking sends
+        Optional<UserPreference> preference = preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(
                 user.getId(), request.getNotificationType(), request.getChannel());
         if (preference.isPresent() && preference.get().getPreference() == PreferenceType.DISABLED) {
             throw new NotificationNotAllowed("User with externalId: " + request.getUserExternalId()

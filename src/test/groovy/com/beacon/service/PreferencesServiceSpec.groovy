@@ -5,6 +5,7 @@ import com.beacon.exception.UserException
 import com.beacon.model.entity.User
 import com.beacon.model.entity.UserPreference
 import com.beacon.model.request.CreateUserPreferenceRequest
+import com.beacon.model.request.UpdateUserPreferenceRequest
 import com.beacon.model.response.CreateUserPreferenceResponse
 import com.beacon.model.response.GetPreferenceResponse
 import com.beacon.model.response.GetPreferencesResponse
@@ -122,12 +123,12 @@ class PreferencesServiceSpec extends Specification {
         response.channel == Channel.EMAIL
     }
 
-    def "getAllUserPreferences returns every preference for the user"() {
+    def "getAllUserPreferences returns every active preference for the user"() {
         given:
         def user = userWithId(1L)
         def preferences = [
                 new UserPreference(id: UUID.randomUUID(), notificationType: "welcome", channel: Channel.EMAIL, preference: PreferenceType.ENABLED, active: true),
-                new UserPreference(id: UUID.randomUUID(), notificationType: "otp", channel: Channel.SMS, preference: PreferenceType.DISABLED, active: false)
+                new UserPreference(id: UUID.randomUUID(), notificationType: "otp", channel: Channel.SMS, preference: PreferenceType.DISABLED, active: true)
         ]
 
         when:
@@ -135,7 +136,7 @@ class PreferencesServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByUserId(1L) >> Optional.of(preferences)
+        1 * preferenceRepository.findByUserIdAndActiveTrue(1L) >> preferences
 
         response.userId == 1L
         response.preferences.size() == 2
@@ -149,21 +150,23 @@ class PreferencesServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("unknown") >> Optional.empty()
-        0 * preferenceRepository.findByUserId(_)
+        0 * preferenceRepository.findByUserIdAndActiveTrue(_)
         thrown(UserException.UserNotFoundException)
     }
 
-    def "getAllUserPreferences throws PreferenceNotFound when the repository returns an empty Optional"() {
+    def "getAllUserPreferences returns an empty list when the user has no active preferences"() {
         given:
         def user = userWithId(1L)
 
         when:
-        preferencesService.getAllUserPreferences("ext-1")
+        GetPreferencesResponse response = preferencesService.getAllUserPreferences("ext-1")
 
-        then:
+        then: "having no preferences is not an error - the user simply has none"
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByUserId(1L) >> Optional.empty()
-        thrown(PreferenceException.PreferenceNotFound)
+        1 * preferenceRepository.findByUserIdAndActiveTrue(1L) >> []
+
+        response.userId == 1L
+        response.preferences.isEmpty()
     }
 
     def "getUserPreference returns the matching preference"() {
@@ -183,7 +186,7 @@ class PreferencesServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByIdAndUserId(preferenceId, 1L) >> Optional.of(preference)
+        1 * preferenceRepository.findByIdAndUserIdAndActiveTrue(preferenceId, 1L) >> Optional.of(preference)
 
         response.id == preferenceId
         response.notificationType == "welcome"
@@ -202,7 +205,7 @@ class PreferencesServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByIdAndUserId(preferenceId, 1L) >> Optional.empty()
+        1 * preferenceRepository.findByIdAndUserIdAndActiveTrue(preferenceId, 1L) >> Optional.empty()
         thrown(PreferenceException.PreferenceNotFound)
     }
 
@@ -215,7 +218,136 @@ class PreferencesServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("unknown") >> Optional.empty()
-        0 * preferenceRepository.findByIdAndUserId(_, _)
+        0 * preferenceRepository.findByIdAndUserIdAndActiveTrue(_, _)
+        thrown(UserException.UserNotFoundException)
+    }
+
+    def "addUserPreference revives a soft-deleted preference instead of inserting a duplicate"() {
+        given: "the user previously deleted this preference, leaving an inactive row in the unique slot"
+        def request = new CreateUserPreferenceRequest(
+                userExternalId: "ext-1",
+                notificationType: "welcome",
+                channel: Channel.EMAIL,
+                preference: PreferenceType.DISABLED
+        )
+        def user = userWithId(1L)
+        def softDeleted = new UserPreference(
+                id: UUID.fromString("00000000-0000-0000-0000-0000000000ff"),
+                userId: 1L,
+                notificationType: "welcome",
+                channel: Channel.EMAIL,
+                preference: PreferenceType.ENABLED,
+                active: false
+        )
+
+        when:
+        CreateUserPreferenceResponse response = preferencesService.addUserPreference(request)
+
+        then: "the existing row is reactivated and updated rather than a second row being created"
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(softDeleted)
+        1 * preferenceRepository.save({ UserPreference p ->
+            p.is(softDeleted) && p.active && p.preference == PreferenceType.DISABLED
+        }) >> { UserPreference p -> p }
+
+        and:
+        response.id == UUID.fromString("00000000-0000-0000-0000-0000000000ff")
+    }
+
+    def "updateUserPreference changes the preference value and returns the updated row"() {
+        given:
+        def user = userWithId(1L)
+        def preferenceId = UUID.randomUUID()
+        def preference = new UserPreference(
+                id: preferenceId,
+                userId: 1L,
+                notificationType: "welcome",
+                channel: Channel.EMAIL,
+                preference: PreferenceType.ENABLED,
+                active: true
+        )
+
+        when:
+        GetPreferenceResponse response = preferencesService.updateUserPreference(
+                "ext-1", preferenceId, new UpdateUserPreferenceRequest(preference: PreferenceType.DISABLED))
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByIdAndUserIdAndActiveTrue(preferenceId, 1L) >> Optional.of(preference)
+        1 * preferenceRepository.save({ UserPreference p -> p.preference == PreferenceType.DISABLED }) >> { UserPreference p -> p }
+
+        and:
+        response.id == preferenceId
+        response.preference == PreferenceType.DISABLED
+        response.isActive
+    }
+
+    def "updateUserPreference throws PreferenceNotFound when the preference is missing or already deleted"() {
+        given:
+        def user = userWithId(1L)
+        def preferenceId = UUID.randomUUID()
+
+        when:
+        preferencesService.updateUserPreference(
+                "ext-1", preferenceId, new UpdateUserPreferenceRequest(preference: PreferenceType.DISABLED))
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByIdAndUserIdAndActiveTrue(preferenceId, 1L) >> Optional.empty()
+        0 * preferenceRepository.save(_)
+        thrown(PreferenceException.PreferenceNotFound)
+    }
+
+    def "updateUserPreference throws UserNotFoundException when the user does not exist"() {
+        when:
+        preferencesService.updateUserPreference(
+                "unknown", UUID.randomUUID(), new UpdateUserPreferenceRequest(preference: PreferenceType.DISABLED))
+
+        then:
+        1 * userRepository.findByExternalId("unknown") >> Optional.empty()
+        0 * preferenceRepository.save(_)
+        thrown(UserException.UserNotFoundException)
+    }
+
+    def "deleteUserPreference soft deletes by clearing the active flag"() {
+        given:
+        def user = userWithId(1L)
+        def preferenceId = UUID.randomUUID()
+        def preference = new UserPreference(id: preferenceId, userId: 1L, active: true)
+
+        when:
+        preferencesService.deleteUserPreference("ext-1", preferenceId)
+
+        then: "the row is kept and flagged inactive, not removed"
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByIdAndUserIdAndActiveTrue(preferenceId, 1L) >> Optional.of(preference)
+        1 * preferenceRepository.save({ UserPreference p -> !p.active }) >> { UserPreference p -> p }
+        0 * preferenceRepository.delete(_)
+        0 * preferenceRepository.deleteById(_)
+    }
+
+    def "deleteUserPreference throws PreferenceNotFound when the preference is missing or already deleted"() {
+        given:
+        def user = userWithId(1L)
+        def preferenceId = UUID.randomUUID()
+
+        when:
+        preferencesService.deleteUserPreference("ext-1", preferenceId)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByIdAndUserIdAndActiveTrue(preferenceId, 1L) >> Optional.empty()
+        0 * preferenceRepository.save(_)
+        thrown(PreferenceException.PreferenceNotFound)
+    }
+
+    def "deleteUserPreference throws UserNotFoundException when the user does not exist"() {
+        when:
+        preferencesService.deleteUserPreference("unknown", UUID.randomUUID())
+
+        then:
+        1 * userRepository.findByExternalId("unknown") >> Optional.empty()
+        0 * preferenceRepository.save(_)
         thrown(UserException.UserNotFoundException)
     }
 }

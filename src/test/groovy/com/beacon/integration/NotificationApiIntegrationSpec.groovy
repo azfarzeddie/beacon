@@ -164,6 +164,36 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
                 .andExpect(jsonPath('$.errorCode').value("NOTIFICATION_NOT_ALLOWED"))
     }
 
+    def "POST /api/v1/notifications ignores a soft-deleted DISABLED preference"() {
+        given: "a DISABLED preference that has since been soft deleted"
+        def user = userRepository.save(new User(externalId: "ext-notify-9", name: "Ada", email: "ada9@example.com"))
+        templateRepository.save(new Template(
+                channel: Channel.EMAIL,
+                notificationType: "welcome",
+                body: "Hello {{name}}, welcome to Beacon!"
+        ))
+        preferenceRepository.save(new UserPreference(
+                userId: user.id,
+                notificationType: "welcome",
+                channel: Channel.EMAIL,
+                preference: PreferenceType.DISABLED,
+                active: false
+        ))
+        doReturn(true).when(emailNotificationAction).send(any(NotificationContext))
+        def payload = [
+                userExternalId   : "ext-notify-9",
+                channel          : "EMAIL",
+                notificationType : "welcome",
+                templateVariables: [name: "Ada"]
+        ]
+
+        expect: "the inactive row no longer blocks the send, so it is accepted rather than 403"
+        mockMvc.perform(post("/api/v1/notifications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isAccepted())
+    }
+
     def "POST /api/v1/notifications returns 400 for an invalid payload"() {
         given:
         def payload = [userExternalId: "", notificationType: ""]

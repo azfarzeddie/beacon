@@ -8,8 +8,10 @@ import org.springframework.http.MediaType
 
 import static com.beacon.model.Types.Channel
 import static org.hamcrest.Matchers.containsString
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -48,6 +50,10 @@ class PreferencesApiIntegrationSpec extends AbstractIntegrationSpec {
                 ])))
                 .andExpect(status().isCreated())
                 .andReturn().response.contentAsString
+    }
+
+    private String idOf(String createResponseBody) {
+        return objectMapper.readTree(createResponseBody).get("id").asText()
     }
 
     def "POST /api/v1/preferences creates a preference for an existing user"() {
@@ -185,6 +191,117 @@ class PreferencesApiIntegrationSpec extends AbstractIntegrationSpec {
 
         expect:
         mockMvc.perform(get("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, UUID.randomUUID().toString()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath('$.errorCode').value("PREFERENCE_NOT_FOUND"))
+    }
+
+    def "PUT /api/v1/preferences/{userExternalId}/{preferenceId} updates the preference value"() {
+        given:
+        def externalId = createUser("pref-user-800")
+        def preferenceId = idOf(createPreference(externalId, "welcome", "EMAIL", "ENABLED"))
+
+        when:
+        def result = mockMvc.perform(put("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, preferenceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString([preference: "DISABLED"])))
+
+        then:
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath('$.id').value(preferenceId))
+                .andExpect(jsonPath('$.preference').value("DISABLED"))
+                .andExpect(jsonPath('$.isActive').value(true))
+
+        and: "the change is visible on a subsequent read"
+        mockMvc.perform(get("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, preferenceId))
+                .andExpect(jsonPath('$.preference').value("DISABLED"))
+    }
+
+    def "PUT /api/v1/preferences/{userExternalId}/{preferenceId} returns 400 when the preference value is missing"() {
+        given:
+        def externalId = createUser("pref-user-810")
+        def preferenceId = idOf(createPreference(externalId, "welcome", "EMAIL", "ENABLED"))
+
+        expect:
+        mockMvc.perform(put("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, preferenceId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath('$.errorCode').value("VALIDATION_ERROR"))
+    }
+
+    def "PUT /api/v1/preferences/{userExternalId}/{preferenceId} returns 404 for an unknown preference"() {
+        given:
+        def externalId = createUser("pref-user-820")
+
+        expect:
+        mockMvc.perform(put("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString([preference: "DISABLED"])))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath('$.errorCode').value("PREFERENCE_NOT_FOUND"))
+    }
+
+    def "DELETE /api/v1/preferences/{userExternalId}/{preferenceId} soft deletes and hides the preference"() {
+        given:
+        def externalId = createUser("pref-user-900")
+        def preferenceId = idOf(createPreference(externalId, "welcome", "EMAIL", "DISABLED"))
+
+        when:
+        def result = mockMvc.perform(delete("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, preferenceId))
+
+        then:
+        result.andExpect(status().isNoContent())
+
+        and: "it disappears from both read endpoints"
+        mockMvc.perform(get("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, preferenceId))
+                .andExpect(status().isNotFound())
+        mockMvc.perform(get("/api/v1/preferences/{userExternalId}", externalId))
+                .andExpect(jsonPath('$.preferences').isEmpty())
+
+        and: "the row survives with active=false rather than being removed"
+        def userId = userRepository.findByExternalId(externalId).get().id
+        def row = preferenceRepository.findByUserIdAndNotificationTypeAndChannel(userId, "welcome", Channel.EMAIL)
+        row.isPresent()
+        !row.get().active
+    }
+
+    def "DELETE then POST revives the soft-deleted preference rather than conflicting"() {
+        given: "a preference that has been deleted, leaving an inactive row in the unique slot"
+        def externalId = createUser("pref-user-910")
+        def originalId = idOf(createPreference(externalId, "welcome", "EMAIL", "ENABLED"))
+        mockMvc.perform(delete("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, originalId))
+                .andExpect(status().isNoContent())
+
+        when: "the same notificationType and channel is created again"
+        def result = mockMvc.perform(post("/api/v1/preferences")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString([
+                        userExternalId  : externalId,
+                        notificationType: "welcome",
+                        channel         : "EMAIL",
+                        preference      : "DISABLED"
+                ])))
+
+        then: "it succeeds by reviving the existing row, keeping the same id"
+        result.andExpect(status().isCreated())
+                .andExpect(jsonPath('$.id').value(originalId))
+
+        and: "it is readable again with the new value"
+        mockMvc.perform(get("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, originalId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath('$.preference').value("DISABLED"))
+                .andExpect(jsonPath('$.isActive').value(true))
+    }
+
+    def "DELETE /api/v1/preferences/{userExternalId}/{preferenceId} is 404 on a second call"() {
+        given:
+        def externalId = createUser("pref-user-920")
+        def preferenceId = idOf(createPreference(externalId, "welcome", "EMAIL", "ENABLED"))
+        mockMvc.perform(delete("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, preferenceId))
+                .andExpect(status().isNoContent())
+
+        expect:
+        mockMvc.perform(delete("/api/v1/preferences/{userExternalId}/{preferenceId}", externalId, preferenceId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath('$.errorCode').value("PREFERENCE_NOT_FOUND"))
     }
