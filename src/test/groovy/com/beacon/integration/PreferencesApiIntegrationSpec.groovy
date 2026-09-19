@@ -69,7 +69,36 @@ class PreferencesApiIntegrationSpec extends AbstractIntegrationSpec {
                 .andExpect(jsonPath('$.channel').value("EMAIL"))
 
         and:
-        preferenceRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL).isPresent()
+        def userId = userRepository.findByExternalId(externalId).get().id
+        preferenceRepository.findByUserIdAndNotificationTypeAndChannel(userId, "welcome", Channel.EMAIL).isPresent()
+    }
+
+    def "POST /api/v1/preferences lets a second user create a notificationType/channel another user already has"() {
+        given:
+        def firstUser = createUser("pref-user-600")
+        def secondUser = createUser("pref-user-601")
+        createPreference(firstUser, "welcome", "EMAIL", "ENABLED")
+
+        when: "the second user asks for the same notificationType and channel"
+        def result = mockMvc.perform(post("/api/v1/preferences")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString([
+                        userExternalId  : secondUser,
+                        notificationType: "welcome",
+                        channel         : "EMAIL",
+                        preference      : "DISABLED"
+                ])))
+
+        then: "it is created rather than rejected as a duplicate"
+        result.andExpect(status().isCreated())
+                .andExpect(jsonPath('$.notificationType').value("welcome"))
+                .andExpect(jsonPath('$.channel').value("EMAIL"))
+
+        and: "both users end up with their own row"
+        def firstUserId = userRepository.findByExternalId(firstUser).get().id
+        def secondUserId = userRepository.findByExternalId(secondUser).get().id
+        preferenceRepository.findByUserIdAndNotificationTypeAndChannel(firstUserId, "welcome", Channel.EMAIL).isPresent()
+        preferenceRepository.findByUserIdAndNotificationTypeAndChannel(secondUserId, "welcome", Channel.EMAIL).isPresent()
     }
 
     def "POST /api/v1/preferences returns 404 when the user does not exist"() {
@@ -115,6 +144,16 @@ class PreferencesApiIntegrationSpec extends AbstractIntegrationSpec {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath('$.preferences.length()').value(2))
                 .andExpect(jsonPath('$.preferences[*].notificationType').value(org.hamcrest.Matchers.containsInAnyOrder("welcome", "otp")))
+    }
+
+    def "GET /api/v1/preferences/{userExternalId} returns 200 and an empty list for a user with no preferences"() {
+        given:
+        def externalId = createUser("pref-user-700")
+
+        expect: "an existing user with no rows is not a 404 - Spring Data returns an empty list, never an empty Optional"
+        mockMvc.perform(get("/api/v1/preferences/{userExternalId}", externalId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath('$.preferences').isEmpty())
     }
 
     def "GET /api/v1/preferences/{userExternalId} returns 404 when the user does not exist"() {

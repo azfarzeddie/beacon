@@ -46,7 +46,7 @@ class PreferencesServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.empty()
         1 * preferenceRepository.save({ UserPreference p ->
             p.userId == 1L &&
                     p.notificationType == "welcome" &&
@@ -78,7 +78,7 @@ class PreferencesServiceSpec extends Specification {
         thrown(UserException.UserNotFoundException)
     }
 
-    def "addUserPreference throws PreferenceAlreadyExists when a preference for the type and channel already exists"() {
+    def "addUserPreference throws PreferenceAlreadyExists when the same user already has a preference for the type and channel"() {
         given:
         def request = new CreateUserPreferenceRequest(
                 userExternalId: "ext-1",
@@ -93,9 +93,33 @@ class PreferencesServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
-        1 * preferenceRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(new UserPreference())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(1L, "welcome", Channel.EMAIL) >> Optional.of(new UserPreference())
         0 * preferenceRepository.save(_)
         thrown(PreferenceException.PreferenceAlreadyExists)
+    }
+
+    def "addUserPreference lets a second user set a type and channel another user already uses"() {
+        given: "a preference for this type and channel already belongs to user 1"
+        def request = new CreateUserPreferenceRequest(
+                userExternalId: "ext-2",
+                notificationType: "welcome",
+                channel: Channel.EMAIL,
+                preference: PreferenceType.ENABLED
+        )
+        def secondUser = userWithId(2L, "ext-2")
+
+        when:
+        CreateUserPreferenceResponse response = preferencesService.addUserPreference(request)
+
+        then: "the duplicate check is scoped to user 2, so user 1's row does not block it"
+        1 * userRepository.findByExternalId("ext-2") >> Optional.of(secondUser)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannel(2L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * preferenceRepository.save({ UserPreference p -> p.userId == 2L }) >> { UserPreference p -> p }
+
+        and:
+        response.userId == 2L
+        response.notificationType == "welcome"
+        response.channel == Channel.EMAIL
     }
 
     def "getAllUserPreferences returns every preference for the user"() {

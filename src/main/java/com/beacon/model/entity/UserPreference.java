@@ -14,7 +14,10 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "user_notification_preferences")
+@Table(name = "user_notification_preferences",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_user_pref_user_type_channel",
+                columnNames = {"userId", "notificationType", "channel"}))
 public class UserPreference {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

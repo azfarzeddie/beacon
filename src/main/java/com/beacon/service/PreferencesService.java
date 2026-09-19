@@ -45,7 +45,7 @@ public class PreferencesService {
         // check if a preference with this type and channel already exists for this user
         String notificationType = request.getNotificationType();
         Channel channel = request.getChannel();
-        if (preferenceRepository.findByNotificationTypeAndChannel(notificationType, channel).isPresent()) {
+        if (preferenceRepository.findByUserIdAndNotificationTypeAndChannel(user.getId(), notificationType, channel).isPresent()) {
             throw new PreferenceAlreadyExists("A notification preference for " +
                     notificationType + " and " + channel + " already exists. Please call PUT endpoint to update.");
         }
