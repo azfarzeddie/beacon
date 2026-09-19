@@ -112,6 +112,55 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
                 .andExpect(jsonPath('$.errorCode').value("TEMPLATE_NOT_FOUND"))
     }
 
+    def "POST /api/v1/notifications returns 422 when templateVariables is omitted for a template with placeholders"() {
+        given:
+        userRepository.save(new User(externalId: "ext-notify-novars", name: "Ada", email: "ada-novars@example.com"))
+        templateRepository.save(new Template(
+                channel: Channel.EMAIL,
+                notificationType: "welcome-novars",
+                body: "Hello {{name}}, welcome to Beacon!",
+                subject: "Welcome"
+        ))
+        doReturn(true).when(emailNotificationAction).send(any())
+
+        def payload = [userExternalId: "ext-notify-novars", channel: "EMAIL", notificationType: "welcome-novars"]
+
+        expect: "an unresolvable template is rejected rather than blowing up with a 500"
+        mockMvc.perform(post("/api/v1/notifications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath('$.errorCode').value("TEMPLATE_NOT_RESOLVED"))
+
+        and: "nothing was dispatched with the raw placeholders still in it"
+        Mockito.mockingDetails(emailNotificationAction).invocations.count { it.method.name == "send" } == 0
+    }
+
+    def "POST /api/v1/notifications returns 202 when templateVariables is omitted for a template without placeholders"() {
+        given:
+        userRepository.save(new User(externalId: "ext-notify-static", name: "Ada", email: "ada-static@example.com"))
+        templateRepository.save(new Template(
+                channel: Channel.EMAIL,
+                notificationType: "welcome-static",
+                body: "Welcome to Beacon!",
+                subject: "Welcome"
+        ))
+        doReturn(true).when(emailNotificationAction).send(any())
+
+        def payload = [userExternalId: "ext-notify-static", channel: "EMAIL", notificationType: "welcome-static"]
+
+        expect:
+        mockMvc.perform(post("/api/v1/notifications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isAccepted())
+
+        and:
+        List<Invocation> invocations = Mockito.mockingDetails(emailNotificationAction).invocations.findAll { it.method.name == "send" }
+        invocations.size() == 1
+        (invocations[0].arguments[0] as NotificationContext).message == "Welcome to Beacon!"
+    }
+
     def "POST /api/v1/notifications returns 503 when the channel cannot dispatch"() {
         given:
         userRepository.save(new User(externalId: "ext-notify-3", name: "Ada", phone: "555-0100", email: "ada3@example.com"))

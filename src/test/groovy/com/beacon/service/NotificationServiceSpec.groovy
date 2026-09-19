@@ -115,6 +115,55 @@ class NotificationServiceSpec extends Specification {
         thrown(TemplateException.TemplateNotResolved)
     }
 
+    def "sendNotification resolves against an empty map when the request omits templateVariables"() {
+        given:
+        def request = new SendNotificationRequest(
+                userExternalId: "ext-1",
+                channel: Channel.EMAIL,
+                notificationType: "welcome",
+                templateVariables: null
+        )
+
+        when:
+        notificationService.sendNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(aTemplate())
+        1 * templateService.resolveTemplate("Hello {{name}}", [:]) >> { throw new IllegalArgumentException("Unresolved template variable: name") }
+        0 * notificationActionFactory.getAction(_)
+
+        and: "the failure surfaces as TemplateNotResolved rather than an NPE from building the message"
+        def e = thrown(TemplateException.TemplateNotResolved)
+        e.message.contains("with variables: {}")
+    }
+
+    def "sendNotification dispatches a placeholder-free template when the request omits templateVariables"() {
+        given:
+        def request = new SendNotificationRequest(
+                userExternalId: "ext-1",
+                channel: Channel.EMAIL,
+                notificationType: "welcome",
+                templateVariables: null
+        )
+        def action = Mock(NotificationAction)
+
+        when:
+        notificationService.sendNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(1L, "welcome", Channel.EMAIL) >> Optional.empty()
+        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(
+                new Template(channel: Channel.EMAIL, notificationType: "welcome", body: "Hello there", subject: "Welcome!"))
+        1 * templateService.resolveTemplate("Hello there", [:]) >> "Hello there"
+        1 * templateService.resolveTemplate("Welcome!", [:]) >> "Welcome!"
+        1 * notificationActionFactory.getAction(Channel.EMAIL) >> action
+        1 * action.send({ NotificationContext ctx -> ctx.message == "Hello there" && ctx.subject == "Welcome!" }) >> true
+        noExceptionThrown()
+    }
+
     def "sendNotification throws NotificationDispatchException when the channel fails to send"() {
         given:
         def request = new SendNotificationRequest(

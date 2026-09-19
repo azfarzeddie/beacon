@@ -11,6 +11,7 @@ import java.time.Instant;
 
 import static com.beacon.exception.TemplateException.TemplateAlreadyExists;
 import static com.beacon.exception.TemplateException.TemplateNotFound;
+import static com.beacon.exception.TemplateException.TemplateNotResolved;
 
 @RestControllerAdvice
 public class TemplateExceptionHandler {
@@ -35,5 +36,16 @@ public class TemplateExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(TemplateNotResolved.class)
+    ResponseEntity<ErrorResponse> handleTemplateNotResolvedException(TemplateNotResolved e, HttpServletRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .errorCode("TEMPLATE_NOT_RESOLVED")
+                .errorMessage(e.getLocalizedMessage())
+                .timestamp(Instant.now())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
     }
 }

@@ -4,7 +4,10 @@ import com.beacon.exception.NotificationException.BulkNotificationJobNotFound;
 import com.beacon.exception.NotificationException.NotificationNotAllowed;
 import com.beacon.model.MessageDetails;
 import com.beacon.model.NotificationContext;
-import com.beacon.model.Types.*;
+import com.beacon.model.Types.ActionStatus;
+import com.beacon.model.Types.Channel;
+import com.beacon.model.Types.JobStatus;
+import com.beacon.model.Types.PreferenceType;
 import com.beacon.model.entity.*;
 import com.beacon.model.request.BulkNotificationRequest;
 import com.beacon.model.request.SendNotificationRequest;
@@ -109,15 +112,17 @@ public class NotificationService {
         Template template = templateFound.get();
         String templateBody = template.getBody();
         String subjectTemplate = template.getSubject();
+        Map<String, String> templateVariables = request.getTemplateVariables() != null
+                ? request.getTemplateVariables() : Map.of();
         String message, subject = null;
         try {
-            message = templateService.resolveTemplate(templateBody, request.getTemplateVariables());
+            message = templateService.resolveTemplate(templateBody, templateVariables);
             if (subjectTemplate != null) {
-                subject = templateService.resolveTemplate(subjectTemplate, request.getTemplateVariables());
+                subject = templateService.resolveTemplate(subjectTemplate, templateVariables);
             }
         } catch (Exception e) {
             throw new TemplateNotResolved("Failed to resolve template: " + template
-                    + " with variables: " + request.getTemplateVariables().toString());
+                    + " with variables: " + templateVariables);
         }
 
         // get the notification action for this channel
