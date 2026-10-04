@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.UUID;
 
 import static com.beacon.model.Types.Channel;
 
@@ -38,6 +39,12 @@ public class TemplateController {
     @GetMapping("/{notificationType}/{channel}")
     ResponseEntity<GetTemplateResponse> getTemplate(@PathVariable String notificationType, @PathVariable Channel channel) {
         GetTemplateResponse template = templateService.getTemplate(notificationType, channel);
+        return ResponseEntity.ok(template);
+    }
+
+    @GetMapping("/{id}")
+    ResponseEntity<GetTemplateResponse> getTemplateById(@PathVariable UUID id) {
+        GetTemplateResponse template = templateService.getTemplateById(id);
         return ResponseEntity.ok(template);
     }
 }

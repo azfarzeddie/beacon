@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,6 +58,24 @@ public class TemplateService {
         Optional<Template> found = templateRepository.findByNotificationTypeAndChannel(notificationType, channel);
         if (found.isEmpty()) {
             throw new TemplateNotFound("No template found for " + notificationType + " and " + channel);
+        }
+
+        Template template = found.get();
+        return new GetTemplateResponse(
+                template.getId(),
+                template.getChannel(),
+                template.getNotificationType(),
+                template.getBody(),
+                template.getSubject(),
+                template.getCreatedAt(),
+                template.getUpdatedAt()
+        );
+    }
+
+    public GetTemplateResponse getTemplateById(UUID id) {
+        Optional<Template> found = templateRepository.findById(id);
+        if (found.isEmpty()) {
+            throw new TemplateNotFound("No template found for ID: " + id);
         }
 
         Template template = found.get();
