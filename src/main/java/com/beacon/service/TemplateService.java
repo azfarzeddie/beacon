@@ -9,8 +9,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -84,25 +86,34 @@ public class TemplateService {
         return prepareResponse(found.get());
     }
 
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([^{}]+)}}");
+
+    /**
+     * Renders the template in a single pass: each placeholder is replaced by its variable's value, and the
+     * substituted values are never re-scanned. A variable value that itself contains {{...}} is therefore
+     * emitted literally, and the result does not depend on the map's iteration order.
+     * Placeholders with no (or a null) value are collected and reported together by name.
+     */
     public String resolveTemplate(String template, Map<String, String> templateVariables) {
-        String message = template;
+        Matcher matcher = PLACEHOLDER.matcher(template);
+        StringBuilder message = new StringBuilder();
+        Set<String> unresolved = new LinkedHashSet<>();
 
-        for (Map.Entry<String, String> entry : templateVariables.entrySet()) {
-            String variableName = entry.getKey();
-            String variableValue = entry.getValue();
+        while (matcher.find()) {
+            String value = templateVariables.get(matcher.group(1));
+            if (value == null) {
+                unresolved.add(matcher.group(1));
+                matcher.appendReplacement(message, Matcher.quoteReplacement(matcher.group()));
+            } else {
+                matcher.appendReplacement(message, Matcher.quoteReplacement(value));
+            }
+        }
+        matcher.appendTail(message);
 
-            message = message.replace("{{" + variableName + "}}", variableValue);
+        if (!unresolved.isEmpty()) {
+            throw new IllegalArgumentException("Unresolved template variables: " + String.join(", ", unresolved));
         }
 
-        Pattern pattern = Pattern.compile("\\{\\{([^{}]+)}}");
-        Matcher matcher = pattern.matcher(message);
-
-        if (matcher.find()) {
-            throw new IllegalArgumentException(
-                    "Unresolved template variable: " + matcher.group(1)
-            );
-        }
-
-        return message;
+        return message.toString();
     }
 }

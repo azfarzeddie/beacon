@@ -134,6 +134,52 @@ class TemplateServiceSpec extends Specification {
         templateService.resolveTemplate("Hello {{name}}, your code is {{code}}", [name: "Ada"])
 
         then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unresolved template variables: code"
+    }
+
+    def "resolveTemplate reports every unresolved placeholder once, in order of appearance"() {
+        when:
+        templateService.resolveTemplate("{{b}} {{a}} {{b}} {{c}}", [c: "x"])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unresolved template variables: b, a"
+    }
+
+    def "resolveTemplate treats a null variable value as unresolved"() {
+        when:
+        templateService.resolveTemplate("Hello {{name}}", [name: null])
+
+        then:
         thrown(IllegalArgumentException)
+    }
+
+    def "resolveTemplate does not re-scan substituted values, so variables cannot inject each other"() {
+        expect:
+        templateService.resolveTemplate("Hello {{a}}", variables) == "Hello {{b}}"
+
+        where:
+        variables << [
+                [a: "{{b}}", b: "INJECTED"],
+                new LinkedHashMap([b: "INJECTED", a: "{{b}}"]),
+                new TreeMap([a: "{{b}}", b: "INJECTED"])
+        ]
+    }
+
+    def "resolveTemplate allows a legitimate value that contains braces"() {
+        expect:
+        templateService.resolveTemplate("Snippet: {{code}}", [code: "use {{ and }} in templates"]) ==
+                "Snippet: use {{ and }} in templates"
+    }
+
+    def "resolveTemplate inserts values containing regex replacement characters literally"() {
+        expect:
+        templateService.resolveTemplate("Price: {{price}}", [price: 'US$5 \\ $1']) == 'Price: US$5 \\ $1'
+    }
+
+    def "resolveTemplate substitutes a repeated placeholder everywhere and ignores unused variables"() {
+        expect:
+        templateService.resolveTemplate("{{n}}-{{n}}", [n: "7", unused: "x"]) == "7-7"
     }
 }
