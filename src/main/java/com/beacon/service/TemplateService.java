@@ -29,7 +29,7 @@ public class TemplateService {
         if (templateRepository.findByNotificationTypeAndChannel(
                 request.getNotificationType(), request.getChannel()).isPresent()) {
             throw new TemplateAlreadyExists("A template for " + request.getNotificationType()
-                    + " and " + request.getChannel() + " already exists.");
+                    + " and " + request.getChannel() + " already exists. Please call the PUT endpoint to update it.");
         }
 
         Template template = new Template();

@@ -12,7 +12,10 @@ import java.util.UUID;
 import static com.beacon.model.Types.Channel;
 
 @Entity
-@Table(name = "templates")
+@Table(name = "templates",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_channel_notification_type",
+                columnNames = {"notificationType", "channel"}))
 @Getter
 @Setter
 public class Template {
