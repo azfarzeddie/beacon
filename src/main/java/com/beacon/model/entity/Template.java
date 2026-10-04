@@ -3,6 +3,7 @@ package com.beacon.model.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -18,6 +19,7 @@ import static com.beacon.model.Types.Channel;
                 columnNames = {"notificationType", "channel"}))
 @Getter
 @Setter
+@ToString
 public class Template {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

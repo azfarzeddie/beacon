@@ -122,7 +122,7 @@ public class NotificationService {
             }
         } catch (Exception e) {
             throw new TemplateNotResolved("Failed to resolve template: " + template
-                    + " with variables: " + templateVariables);
+                    + " with variables: " + templateVariables.keySet());
         }
 
         // get the notification action for this channel
