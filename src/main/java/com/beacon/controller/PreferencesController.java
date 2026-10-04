@@ -28,7 +28,7 @@ public class PreferencesController {
     @PostMapping
     ResponseEntity<CreateUserPreferenceResponse> createUserPreference(@Valid @RequestBody CreateUserPreferenceRequest request) {
         CreateUserPreferenceResponse response = preferencesService.addUserPreference(request);
-        URI location = URI.create("/api/v1/preferences/" + response.getId());
+        URI location = URI.create("/api/v1/preferences/" + response.getUserExternalId() + "/" + response.getId());
         return ResponseEntity.created(location).body(response);
     }
 

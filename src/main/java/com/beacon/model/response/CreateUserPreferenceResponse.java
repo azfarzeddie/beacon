@@ -12,6 +12,7 @@ import java.util.UUID;
 public class CreateUserPreferenceResponse {
     UUID id;
     Long userId;
+    String userExternalId;
     String notificationType;
     Types.Channel channel;
     Instant createdAt;

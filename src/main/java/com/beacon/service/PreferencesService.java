@@ -61,7 +61,7 @@ public class PreferencesService {
         preference.setActive(true);
 
         preferenceRepository.save(preference);
-        return new CreateUserPreferenceResponse(preference.getId(), preference.getUserId(),
+        return new CreateUserPreferenceResponse(preference.getId(), preference.getUserId(), user.getExternalId(),
                 preference.getNotificationType(), preference.getChannel(), preference.getCreatedAt(),
                 preference.getUpdatedAt());
     }
