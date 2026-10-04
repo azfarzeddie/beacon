@@ -6,6 +6,7 @@ import com.beacon.model.request.CreateTemplateRequest
 import com.beacon.model.response.CreateTemplateResponse
 import com.beacon.model.response.GetTemplateResponse
 import com.beacon.repository.TemplateRepository
+import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Specification
 import spock.lang.Subject
 
@@ -32,7 +33,7 @@ class TemplateServiceSpec extends Specification {
 
         then:
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.empty()
-        1 * templateRepository.save({ Template t ->
+        1 * templateRepository.saveAndFlush({ Template t ->
             t.channel == Channel.EMAIL &&
                     t.notificationType == "welcome" &&
                     t.body == "Hello {{name}}" &&
@@ -53,7 +54,7 @@ class TemplateServiceSpec extends Specification {
 
         then:
         1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.empty()
-        1 * templateRepository.save({ Template t -> t.subject == null }) >> { Template t -> t }
+        1 * templateRepository.saveAndFlush({ Template t -> t.subject == null }) >> { Template t -> t }
     }
 
     def "createTemplate throws TemplateAlreadyExists when a template for the type and channel already exists"() {
@@ -65,8 +66,23 @@ class TemplateServiceSpec extends Specification {
 
         then:
         1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.of(new Template())
-        0 * templateRepository.save(_)
-        thrown(TemplateException.TemplateAlreadyExists)
+        0 * templateRepository.saveAndFlush(_)
+        def e = thrown(TemplateException.TemplateAlreadyExists)
+        e.message == "A template for otp and SMS already exists. Please call the PUT endpoint to update it."
+    }
+
+    def "createTemplate maps a unique constraint violation from a concurrent insert to TemplateAlreadyExists"() {
+        given:
+        def request = new CreateTemplateRequest(templateBody: "Hi", notificationType: "otp", channel: Channel.SMS)
+
+        when:
+        templateService.createTemplate(request)
+
+        then: "the pre-check passes because the other request has not committed yet"
+        1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.empty()
+        1 * templateRepository.saveAndFlush(_ as Template) >> { throw new DataIntegrityViolationException("uk_channel_notification_type") }
+        def e = thrown(TemplateException.TemplateAlreadyExists)
+        e.message == "A template for otp and SMS already exists. Please call the PUT endpoint to update it."
     }
 
     def "getTemplate returns the matching template"() {

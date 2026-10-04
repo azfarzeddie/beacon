@@ -60,8 +60,8 @@ class PreferencesApiIntegrationSpec extends AbstractIntegrationSpec {
         given:
         def externalId = createUser("pref-user-100")
 
-        expect:
-        mockMvc.perform(post("/api/v1/preferences")
+        when:
+        def result = mockMvc.perform(post("/api/v1/preferences")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString([
                         userExternalId  : externalId,
@@ -70,9 +70,19 @@ class PreferencesApiIntegrationSpec extends AbstractIntegrationSpec {
                         preference      : "ENABLED"
                 ])))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", containsString("/api/v1/preferences/")))
+                .andExpect(jsonPath('$.userExternalId').value(externalId))
                 .andExpect(jsonPath('$.notificationType').value("welcome"))
                 .andExpect(jsonPath('$.channel').value("EMAIL"))
+                .andReturn().response
+
+        then: "the Location header points at the GET endpoint for the new preference"
+        def preferenceId = idOf(result.contentAsString)
+        result.getHeader("Location") == "/api/v1/preferences/${externalId}/${preferenceId}".toString()
+
+        and: "following the Location header returns the created preference"
+        mockMvc.perform(get(result.getHeader("Location")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath('$.id').value(preferenceId))
 
         and:
         def userId = userRepository.findByExternalId(externalId).get().id

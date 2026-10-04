@@ -5,7 +5,9 @@ import com.beacon.model.request.CreateTemplateRequest;
 import com.beacon.model.response.CreateTemplateResponse;
 import com.beacon.model.response.GetTemplateResponse;
 import com.beacon.repository.TemplateRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +26,7 @@ public class TemplateService {
         this.templateRepository = templateRepository;
     }
 
+    @Transactional
     public CreateTemplateResponse createTemplate(CreateTemplateRequest request) {
         // check if a template for this notification type and channel combination already exists
         if (templateRepository.findByNotificationTypeAndChannel(
@@ -40,7 +43,12 @@ public class TemplateService {
             template.setSubject(request.getSubject());
         }
 
-        templateRepository.save(template);
+        try {
+            templateRepository.saveAndFlush(template);
+        } catch (DataIntegrityViolationException e) {
+            throw new TemplateAlreadyExists("A template for " + request.getNotificationType() + " and "
+                    + request.getChannel() + " already exists. Please call the PUT endpoint to update it.");
+        }
 
         return new CreateTemplateResponse(template.getId(), template.getChannel(), template.getNotificationType());
     }

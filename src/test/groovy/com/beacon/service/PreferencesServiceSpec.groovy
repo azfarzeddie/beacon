@@ -57,6 +57,7 @@ class PreferencesServiceSpec extends Specification {
 
         response.id == UUID.fromString("00000000-0000-0000-0000-000000000001")
         response.userId == 1L
+        response.userExternalId == "ext-1"
         response.notificationType == "welcome"
         response.channel == Channel.EMAIL
     }
