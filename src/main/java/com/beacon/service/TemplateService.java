@@ -60,15 +60,18 @@ public class TemplateService {
             throw new TemplateNotFound("No template found for " + notificationType + " and " + channel);
         }
 
-        Template template = found.get();
+        return prepareResponse(found.get());
+    }
+
+    private static GetTemplateResponse prepareResponse(Template found) {
         return new GetTemplateResponse(
-                template.getId(),
-                template.getChannel(),
-                template.getNotificationType(),
-                template.getBody(),
-                template.getSubject(),
-                template.getCreatedAt(),
-                template.getUpdatedAt()
+                found.getId(),
+                found.getChannel(),
+                found.getNotificationType(),
+                found.getBody(),
+                found.getSubject(),
+                found.getCreatedAt(),
+                found.getUpdatedAt()
         );
     }
 
@@ -78,16 +81,7 @@ public class TemplateService {
             throw new TemplateNotFound("No template found for ID: " + id);
         }
 
-        Template template = found.get();
-        return new GetTemplateResponse(
-                template.getId(),
-                template.getChannel(),
-                template.getNotificationType(),
-                template.getBody(),
-                template.getSubject(),
-                template.getCreatedAt(),
-                template.getUpdatedAt()
-        );
+        return prepareResponse(found.get());
     }
 
     public String resolveTemplate(String template, Map<String, String> templateVariables) {
