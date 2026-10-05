@@ -1,21 +1,23 @@
 package com.beacon.model.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import com.beacon.model.entity.Template;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import static com.beacon.model.Types.Channel;
 
-@Data
-@AllArgsConstructor
-public class GetTemplateResponse {
-    private UUID id;
-    private Channel channel;
-    private String notificationType;
-    private String body;
-    private String subject;
-    private Instant createdAt;
-    private Instant updatedAt;
+public record GetTemplateResponse(
+        UUID id,
+        Channel channel,
+        String notificationType,
+        String body,
+        String subject,
+        Instant createdAt,
+        Instant updatedAt) {
+
+    public static GetTemplateResponse from(Template template) {
+        return new GetTemplateResponse(template.getId(), template.getChannel(), template.getNotificationType(),
+                template.getBody(), template.getSubject(), template.getCreatedAt(), template.getUpdatedAt());
+    }
 }

@@ -470,15 +470,15 @@ class NotificationServiceSpec extends Specification {
         1 * jobRepository.findById(jobId) >> Optional.of(job)
 
         and:
-        response.jobId == jobId
-        response.status == JobStatus.PARTIALLY_COMPLETED
-        response.actionCount == 10
-        response.successCount == 7
-        response.failureCount == 2
-        response.skippedCount == 1
-        response.createdAt == completedAt.minusSeconds(60)
-        response.updatedAt == completedAt
-        response.completedAt == completedAt
+        response.jobId() == jobId
+        response.status() == JobStatus.PARTIALLY_COMPLETED
+        response.actionCount() == 10
+        response.successCount() == 7
+        response.failureCount() == 2
+        response.skippedCount() == 1
+        response.createdAt() == completedAt.minusSeconds(60)
+        response.updatedAt() == completedAt
+        response.completedAt() == completedAt
     }
 
     def "getBulkNotificationJob reports a job that is still running with no completedAt"() {
@@ -493,12 +493,12 @@ class NotificationServiceSpec extends Specification {
         1 * jobRepository.findById(jobId) >> Optional.of(job)
 
         and:
-        response.status == JobStatus.IN_PROGRESS
-        response.actionCount == 5
-        response.successCount == 0
-        response.failureCount == 0
-        response.skippedCount == 0
-        response.completedAt == null
+        response.status() == JobStatus.IN_PROGRESS
+        response.actionCount() == 5
+        response.successCount() == 0
+        response.failureCount() == 0
+        response.skippedCount() == 0
+        response.completedAt() == null
     }
 
     def "getBulkNotificationJob throws BulkNotificationJobNotFound when no job has that id"() {

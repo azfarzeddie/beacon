@@ -55,11 +55,11 @@ class PreferencesServiceSpec extends Specification {
                     p.preference == PreferenceType.ENABLED
         }) >> { UserPreference p -> p.id = UUID.fromString("00000000-0000-0000-0000-000000000001"); p }
 
-        response.id == UUID.fromString("00000000-0000-0000-0000-000000000001")
-        response.userId == 1L
-        response.userExternalId == "ext-1"
-        response.notificationType == "welcome"
-        response.channel == Channel.EMAIL
+        response.id() == UUID.fromString("00000000-0000-0000-0000-000000000001")
+        response.userId() == 1L
+        response.userExternalId() == "ext-1"
+        response.notificationType() == "welcome"
+        response.channel() == Channel.EMAIL
     }
 
     def "addUserPreference throws UserNotFoundException when the user does not exist"() {
@@ -119,9 +119,9 @@ class PreferencesServiceSpec extends Specification {
         1 * preferenceRepository.save({ UserPreference p -> p.userId == 2L }) >> { UserPreference p -> p }
 
         and:
-        response.userId == 2L
-        response.notificationType == "welcome"
-        response.channel == Channel.EMAIL
+        response.userId() == 2L
+        response.notificationType() == "welcome"
+        response.channel() == Channel.EMAIL
     }
 
     def "getAllUserPreferences returns every active preference for the user"() {
@@ -139,10 +139,10 @@ class PreferencesServiceSpec extends Specification {
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
         1 * preferenceRepository.findByUserIdAndActiveTrue(1L) >> preferences
 
-        response.userId == 1L
-        response.preferences.size() == 2
-        response.preferences*.notificationType == ["welcome", "otp"]
-        response.preferences*.preference == [PreferenceType.ENABLED, PreferenceType.DISABLED]
+        response.userId() == 1L
+        response.preferences().size() == 2
+        response.preferences()*.notificationType() == ["welcome", "otp"]
+        response.preferences()*.preference() == [PreferenceType.ENABLED, PreferenceType.DISABLED]
     }
 
     def "getAllUserPreferences throws UserNotFoundException when the user does not exist"() {
@@ -166,8 +166,8 @@ class PreferencesServiceSpec extends Specification {
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
         1 * preferenceRepository.findByUserIdAndActiveTrue(1L) >> []
 
-        response.userId == 1L
-        response.preferences.isEmpty()
+        response.userId() == 1L
+        response.preferences().isEmpty()
     }
 
     def "getUserPreference returns the matching preference"() {
@@ -189,11 +189,11 @@ class PreferencesServiceSpec extends Specification {
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
         1 * preferenceRepository.findByIdAndUserIdAndActiveTrue(preferenceId, 1L) >> Optional.of(preference)
 
-        response.id == preferenceId
-        response.notificationType == "welcome"
-        response.channel == Channel.EMAIL
-        response.preference == PreferenceType.ENABLED
-        response.isActive
+        response.id() == preferenceId
+        response.notificationType() == "welcome"
+        response.channel() == Channel.EMAIL
+        response.preference() == PreferenceType.ENABLED
+        response.isActive()
     }
 
     def "getUserPreference throws PreferenceNotFound when no preference matches"() {
@@ -252,7 +252,7 @@ class PreferencesServiceSpec extends Specification {
         }) >> { UserPreference p -> p }
 
         and:
-        response.id == UUID.fromString("00000000-0000-0000-0000-0000000000ff")
+        response.id() == UUID.fromString("00000000-0000-0000-0000-0000000000ff")
     }
 
     def "updateUserPreference changes the preference value and returns the updated row"() {
@@ -278,9 +278,9 @@ class PreferencesServiceSpec extends Specification {
         1 * preferenceRepository.save({ UserPreference p -> p.preference == PreferenceType.DISABLED }) >> { UserPreference p -> p }
 
         and:
-        response.id == preferenceId
-        response.preference == PreferenceType.DISABLED
-        response.isActive
+        response.id() == preferenceId
+        response.preference() == PreferenceType.DISABLED
+        response.isActive()
     }
 
     def "updateUserPreference throws PreferenceNotFound when the preference is missing or already deleted"() {

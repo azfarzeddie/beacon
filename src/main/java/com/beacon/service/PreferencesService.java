@@ -12,7 +12,6 @@ import com.beacon.repository.PreferenceRepository;
 import com.beacon.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -61,9 +60,7 @@ public class PreferencesService {
         preference.setActive(true);
 
         preferenceRepository.save(preference);
-        return new CreateUserPreferenceResponse(preference.getId(), preference.getUserId(), user.getExternalId(),
-                preference.getNotificationType(), preference.getChannel(), preference.getCreatedAt(),
-                preference.getUpdatedAt());
+        return CreateUserPreferenceResponse.from(preference, user.getExternalId());
     }
 
     @Transactional
@@ -75,7 +72,7 @@ public class PreferencesService {
         preference.setPreference(request.getPreference());
         preferenceRepository.save(preference);
 
-        return toResponse(preference);
+        return GetPreferenceResponse.from(preference);
     }
 
     @Transactional
@@ -96,30 +93,22 @@ public class PreferencesService {
 
         List<GetPreferenceResponse> notificationPreferences =
                 preferenceRepository.findByUserIdAndActiveTrue(user.getId()).stream()
-                        .map(PreferencesService::toResponse)
+                        .map(GetPreferenceResponse::from)
                         .toList();
-        return GetPreferencesResponse.builder()
-                .userId(user.getId())
-                .preferences(notificationPreferences)
-                .build();
+        return new GetPreferencesResponse(user.getId(), notificationPreferences);
     }
 
     public GetPreferenceResponse getUserPreference(String userId, UUID id) {
         // check if the userId is valid.
         User user = checkUserExists(userId);
 
-        return toResponse(activePreference(user, userId, id));
+        return GetPreferenceResponse.from(activePreference(user, userId, id));
     }
 
     // a soft-deleted preference is treated as gone, so it reads as a 404 rather than a stale row
     private UserPreference activePreference(User user, String userExternalId, UUID id) {
         return preferenceRepository.findByIdAndUserIdAndActiveTrue(id, user.getId())
                 .orElseThrow(() -> new PreferenceNotFound("No preference found for user with ID: " + userExternalId));
-    }
-
-    private static @NonNull GetPreferenceResponse toResponse(UserPreference preference) {
-        return new GetPreferenceResponse(preference.getId(), preference.getNotificationType(), preference.getChannel(),
-                preference.getPreference(), preference.isActive(), preference.getCreatedAt(), preference.getUpdatedAt());
     }
 
     private User checkUserExists(String userId) {

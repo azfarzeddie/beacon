@@ -32,7 +32,7 @@ public class TemplateController {
     @PostMapping
     ResponseEntity<CreateTemplateResponse> createTemplate(@Valid @RequestBody CreateTemplateRequest request) {
         CreateTemplateResponse response = templateService.createTemplate(request);
-        URI location = URI.create("/api/v1/templates/" + response.getId());
+        URI location = URI.create("/api/v1/templates/" + response.id());
         return ResponseEntity.created(location).body(response);
     }
 

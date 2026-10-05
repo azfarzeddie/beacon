@@ -30,7 +30,7 @@ public class UserController {
     @PostMapping
     public ResponseEntity<CreateUserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         CreateUserResponse user = userService.createUser(request);
-        URI location = URI.create("/api/v1/users/" + user.getId());
+        URI location = URI.create("/api/v1/users/" + user.id());
         return ResponseEntity.created(location).body(user);
     }
 

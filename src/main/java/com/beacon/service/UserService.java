@@ -44,7 +44,7 @@ public class UserService {
         });
 
         userRepository.save(user);
-        return new CreateUserResponse(user.getId(), user.getExternalId(), user.getName(), user.getEmail(), user.getPhone());
+        return CreateUserResponse.from(user);
     }
 
     @Transactional
@@ -52,17 +52,6 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("No user with ID: " + id + " found."));
 
-        return GetUserResponse.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .phone(user.getPhone())
-                .email(user.getEmail())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .externalId(user.getExternalId())
-                .deviceTokens(user.getDeviceTokens().stream()
-                        .map(t -> new DeviceTokenResponse(t.getToken(), t.getPlatform()))
-                        .toList())
-                .build();
+        return GetUserResponse.from(user);
     }
 }

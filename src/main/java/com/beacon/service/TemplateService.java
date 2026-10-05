@@ -53,7 +53,7 @@ public class TemplateService {
                     + request.getChannel() + " already exists. Please call the PUT endpoint to update it.");
         }
 
-        return new CreateTemplateResponse(template.getId(), template.getChannel(), template.getNotificationType());
+        return CreateTemplateResponse.from(template);
     }
 
     public GetTemplateResponse getTemplate(String notificationType, Channel channel) {
@@ -62,19 +62,7 @@ public class TemplateService {
             throw new TemplateNotFound("No template found for " + notificationType + " and " + channel);
         }
 
-        return prepareResponse(found.get());
-    }
-
-    private static GetTemplateResponse prepareResponse(Template found) {
-        return new GetTemplateResponse(
-                found.getId(),
-                found.getChannel(),
-                found.getNotificationType(),
-                found.getBody(),
-                found.getSubject(),
-                found.getCreatedAt(),
-                found.getUpdatedAt()
-        );
+        return GetTemplateResponse.from(found.get());
     }
 
     public GetTemplateResponse getTemplateById(UUID id) {
@@ -83,7 +71,7 @@ public class TemplateService {
             throw new TemplateNotFound("No template found for ID: " + id);
         }
 
-        return prepareResponse(found.get());
+        return GetTemplateResponse.from(found.get());
     }
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([^{}]+)}}");

@@ -1,13 +1,11 @@
 package com.beacon.model.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import com.beacon.model.entity.DeviceToken;
 
 import static com.beacon.model.Types.Platform;
 
-@Data
-@AllArgsConstructor
-public class DeviceTokenResponse {
-    private String token;
-    private Platform platform;
+public record DeviceTokenResponse(String token, Platform platform) {
+    public static DeviceTokenResponse from(DeviceToken deviceToken) {
+        return new DeviceTokenResponse(deviceToken.getToken(), deviceToken.getPlatform());
+    }
 }

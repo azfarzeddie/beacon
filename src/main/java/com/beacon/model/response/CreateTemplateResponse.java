@@ -1,16 +1,13 @@
 package com.beacon.model.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import com.beacon.model.entity.Template;
 
 import java.util.UUID;
 
 import static com.beacon.model.Types.Channel;
 
-@Data
-@AllArgsConstructor
-public class CreateTemplateResponse {
-    private UUID id;
-    private Channel channel;
-    private String notificationType;
+public record CreateTemplateResponse(UUID id, Channel channel, String notificationType) {
+    public static CreateTemplateResponse from(Template template) {
+        return new CreateTemplateResponse(template.getId(), template.getChannel(), template.getNotificationType());
+    }
 }

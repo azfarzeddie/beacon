@@ -40,9 +40,9 @@ class TemplateServiceSpec extends Specification {
                     t.subject == "Welcome!"
         }) >> { Template t -> t.id = UUID.fromString("00000000-0000-0000-0000-000000000001"); t }
 
-        response.id == UUID.fromString("00000000-0000-0000-0000-000000000001")
-        response.channel == Channel.EMAIL
-        response.notificationType == "welcome"
+        response.id() == UUID.fromString("00000000-0000-0000-0000-000000000001")
+        response.channel() == Channel.EMAIL
+        response.notificationType() == "welcome"
     }
 
     def "createTemplate does not overwrite the subject when none is provided"() {
@@ -101,11 +101,11 @@ class TemplateServiceSpec extends Specification {
 
         then:
         1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(template)
-        response.id == id
-        response.channel == Channel.EMAIL
-        response.notificationType == "welcome"
-        response.body == "Hello {{name}}"
-        response.subject == "Welcome!"
+        response.id() == id
+        response.channel() == Channel.EMAIL
+        response.notificationType() == "welcome"
+        response.body() == "Hello {{name}}"
+        response.subject() == "Welcome!"
     }
 
     def "getTemplate throws TemplateNotFound when no template matches"() {

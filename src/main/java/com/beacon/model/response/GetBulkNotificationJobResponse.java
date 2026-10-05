@@ -1,24 +1,26 @@
 package com.beacon.model.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import com.beacon.model.entity.BulkNotificationJob;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
 import static com.beacon.model.Types.JobStatus;
 
-@Data
-@AllArgsConstructor
-public class GetBulkNotificationJobResponse {
-    private UUID jobId;
-    private JobStatus status;
-    private int actionCount;
-    private int successCount;
-    private int failureCount;
-    private int skippedCount;
-    private Instant createdAt;
-    private Instant updatedAt;
-    private Instant completedAt;
+public record GetBulkNotificationJobResponse(
+        UUID jobId,
+        JobStatus status,
+        int actionCount,
+        int successCount,
+        int failureCount,
+        int skippedCount,
+        Instant createdAt,
+        Instant updatedAt,
+        Instant completedAt) {
+
+    public static GetBulkNotificationJobResponse from(BulkNotificationJob job) {
+        return new GetBulkNotificationJobResponse(job.getId(), job.getStatus(), job.getActionCount(),
+                job.getSuccessCount(), job.getFailureCount(), job.getSkippedCount(), job.getCreatedAt(),
+                job.getUpdatedAt(), job.getCompletedAt());
+    }
 }

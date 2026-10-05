@@ -47,11 +47,11 @@ class UserServiceSpec extends Specification {
                     u.deviceTokens.every { it.user == u }
         }) >> { User u -> u.id = 42L; u }
 
-        response.id == 42L
-        response.externalId == "ext-1"
-        response.name == "Ada Lovelace"
-        response.email == "ada@example.com"
-        response.phone == "555-0100"
+        response.id() == 42L
+        response.externalId() == "ext-1"
+        response.name() == "Ada Lovelace"
+        response.email() == "ada@example.com"
+        response.phone() == "555-0100"
     }
 
     def "createUser throws UserAlreadyExistsException when the externalId is already taken"() {
@@ -77,12 +77,12 @@ class UserServiceSpec extends Specification {
 
         then:
         1 * userRepository.findById(1L) >> Optional.of(user)
-        response.id == 1L
-        response.externalId == "ext-1"
-        response.name == "Ada"
-        response.deviceTokens.size() == 1
-        response.deviceTokens[0].token == "token-1"
-        response.deviceTokens[0].platform == Platform.WEB
+        response.id() == 1L
+        response.externalId() == "ext-1"
+        response.name() == "Ada"
+        response.deviceTokens().size() == 1
+        response.deviceTokens()[0].token() == "token-1"
+        response.deviceTokens()[0].platform() == Platform.WEB
     }
 
     def "getUser returns an empty device token list when the user has none"() {
@@ -94,7 +94,7 @@ class UserServiceSpec extends Specification {
 
         then:
         1 * userRepository.findById(2L) >> Optional.of(user)
-        response.deviceTokens.isEmpty()
+        response.deviceTokens().isEmpty()
     }
 
     def "getUser throws UserNotFoundException when no user exists for the given id"() {

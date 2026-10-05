@@ -161,16 +161,7 @@ public class NotificationService {
         }
 
         BulkNotificationJob job = found.get();
-        return new GetBulkNotificationJobResponse(
-                job.getId(),
-                job.getStatus(),
-                job.getActionCount(),
-                job.getSuccessCount(),
-                job.getFailureCount(),
-                job.getSkippedCount(),
-                job.getCreatedAt(),
-                job.getUpdatedAt(),
-                job.getCompletedAt());
+        return GetBulkNotificationJobResponse.from(job);
     }
 
     private void runJob(BulkNotificationJob job, List<SendNotificationRequest> notifications) {
