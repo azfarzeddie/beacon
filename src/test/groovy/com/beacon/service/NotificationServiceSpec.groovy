@@ -136,7 +136,7 @@ class NotificationServiceSpec extends Specification {
 
         and: "the failure surfaces as TemplateNotResolved rather than an NPE from building the message"
         def e = thrown(TemplateException.TemplateNotResolved)
-        e.message.contains("with variables: {}")
+        e.message.contains("with variables: []")
     }
 
     def "sendNotification dispatches a placeholder-free template when the request omits templateVariables"() {
