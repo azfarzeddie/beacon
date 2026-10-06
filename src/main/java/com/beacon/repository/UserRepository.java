@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = "deviceTokens")
     Optional<User> findByExternalId(String externalId);
+    Optional<User> findByEmail(String email);
 }
