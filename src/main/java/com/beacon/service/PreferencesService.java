@@ -38,11 +38,11 @@ public class PreferencesService {
     @Transactional
     public CreateUserPreferenceResponse addUserPreference(CreateUserPreferenceRequest request) {
         // check if the userId is valid.
-        User user = checkUserExists(request.getUserExternalId());
+        User user = checkUserExists(request.userExternalId());
 
         // check if a preference with this type and channel already exists for this user
-        String notificationType = request.getNotificationType();
-        Channel channel = request.getChannel();
+        String notificationType = request.notificationType();
+        Channel channel = request.channel();
         Optional<UserPreference> existing = preferenceRepository.findByUserIdAndNotificationTypeAndChannel(
                 user.getId(), notificationType, channel);
         if (existing.isPresent() && existing.get().isActive()) {
@@ -56,7 +56,7 @@ public class PreferencesService {
         preference.setUserId(user.getId());
         preference.setNotificationType(notificationType);
         preference.setChannel(channel);
-        preference.setPreference(request.getPreference());
+        preference.setPreference(request.preference());
         preference.setActive(true);
 
         preferenceRepository.save(preference);
@@ -69,7 +69,7 @@ public class PreferencesService {
         User user = checkUserExists(userId);
 
         UserPreference preference = activePreference(user, userId, id);
-        preference.setPreference(request.getPreference());
+        preference.setPreference(request.preference());
         preferenceRepository.save(preference);
 
         return GetPreferenceResponse.from(preference);

@@ -56,14 +56,14 @@ public class NotificationService {
 
     public void sendNotification(SendNotificationRequest request) {
         NotificationActionRecord record = new NotificationActionRecord();
-        record.setChannel(request.getChannel());
-        record.setNotificationType(request.getNotificationType());
-        record.setUserExternalId(request.getUserExternalId());
+        record.setChannel(request.channel());
+        record.setNotificationType(request.notificationType());
+        record.setUserExternalId(request.userExternalId());
 
         // if any error happens, let the exception handlers return the appropriate HTTP response by rethrowing the error
         try {
             NotificationContext context = sendSingleNotification(request);
-            applySuccess(record, context, request.getChannel());
+            applySuccess(record, context, request.channel());
             actionRepository.save(record);
         } catch (NotificationNotAllowed notAllowed) {
             record.setStatus(ActionStatus.SKIPPED);
@@ -86,34 +86,34 @@ public class NotificationService {
     private NotificationContext sendSingleNotification(SendNotificationRequest request) throws TemplateNotFound {
         // send a notification of notification type to the user with externalId at the given channel
         // check if a user with that externalId exists
-        Optional<User> found = userRepository.findByExternalId(request.getUserExternalId());
+        Optional<User> found = userRepository.findByExternalId(request.userExternalId());
         if (found.isEmpty()) {
-            throw new UserNotFoundException("No user with externalId " + request.getUserExternalId() + " exists.");
+            throw new UserNotFoundException("No user with externalId " + request.userExternalId() + " exists.");
         }
 
         User user = found.get();
         // check user preferences for DnD and applicable channels
         // a soft-deleted preference no longer applies, so it must not keep blocking sends
         Optional<UserPreference> preference = preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(
-                user.getId(), request.getNotificationType(), request.getChannel());
+                user.getId(), request.notificationType(), request.channel());
         if (preference.isPresent() && preference.get().getPreference() == PreferenceType.DISABLED) {
-            throw new NotificationNotAllowed("User with externalId: " + request.getUserExternalId()
-                    + " has disabled all notifications for type " + request.getNotificationType() + " on channel "
-                    + request.getChannel().toString());
+            throw new NotificationNotAllowed("User with externalId: " + request.userExternalId()
+                    + " has disabled all notifications for type " + request.notificationType() + " on channel "
+                    + request.channel().toString());
         }
 
         // fetch the template for this combination of notificationType and channel
-        Optional<Template> templateFound = templateRepository.findByNotificationTypeAndChannel(request.getNotificationType(), request.getChannel());
+        Optional<Template> templateFound = templateRepository.findByNotificationTypeAndChannel(request.notificationType(), request.channel());
         if (templateFound.isEmpty()) {
             throw new TemplateNotFound("No template found for "
-                    + request.getNotificationType() + " and " + request.getChannel());
+                    + request.notificationType() + " and " + request.channel());
         }
 
         Template template = templateFound.get();
         String templateBody = template.getBody();
         String subjectTemplate = template.getSubject();
-        Map<String, String> templateVariables = request.getTemplateVariables() != null
-                ? request.getTemplateVariables() : Map.of();
+        Map<String, String> templateVariables = request.templateVariables() != null
+                ? request.templateVariables() : Map.of();
         String message, subject = null;
         try {
             message = templateService.resolveTemplate(templateBody, templateVariables);
@@ -126,7 +126,7 @@ public class NotificationService {
         }
 
         // get the notification action for this channel
-        NotificationAction action = notificationActionFactory.getAction(request.getChannel());
+        NotificationAction action = notificationActionFactory.getAction(request.channel());
         NotificationContext context = NotificationContext.builder()
                 .name(user.getName())
                 .phone(user.getPhone())
@@ -138,7 +138,7 @@ public class NotificationService {
         boolean result = action.send(context);
         if (!result) {
             throw new NotificationDispatchException("Failed to send notification for "
-                    + request.getNotificationType() + " at " + request.getChannel() + ". Please try again later.");
+                    + request.notificationType() + " at " + request.channel() + ". Please try again later.");
         }
 
         return context;
@@ -149,7 +149,7 @@ public class NotificationService {
 
         // immediately return the jobId and continue the execution in a coordinator virtual thread
         Thread.ofVirtual().name("bulk-job-" + job.getId())
-                .start(() -> runJob(job, request.getNotifications()));
+                .start(() -> runJob(job, request.notifications()));
 
         return new BulkNotificationResponse(job.getId());
     }
@@ -220,36 +220,36 @@ public class NotificationService {
     private void processNotificationAction(BulkNotificationJob job, SendNotificationRequest notificationAction) {
         NotificationActionRecord record = new NotificationActionRecord();
         record.setJob(job);
-        record.setChannel(notificationAction.getChannel());
-        record.setNotificationType(notificationAction.getNotificationType());
-        record.setUserExternalId(notificationAction.getUserExternalId());
+        record.setChannel(notificationAction.channel());
+        record.setNotificationType(notificationAction.notificationType());
+        record.setUserExternalId(notificationAction.userExternalId());
 
         try {
             try {
                 NotificationContext context = sendSingleNotification(notificationAction);
-                applySuccess(record, context, notificationAction.getChannel());
+                applySuccess(record, context, notificationAction.channel());
             } catch (NotificationNotAllowed notAllowed) {
                 record.setStatus(ActionStatus.SKIPPED);
                 record.setFailureReason(notAllowed.getLocalizedMessage());
                 log.info("Job {} skipped notification for user {}: {}", job.getId(),
-                        notificationAction.getUserExternalId(), notAllowed.getMessage());
+                        notificationAction.userExternalId(), notAllowed.getMessage());
             } catch (UserNotFoundException | TemplateNotFound | TemplateNotResolved | NotificationDispatchException e) {
                 record.setStatus(ActionStatus.FAILED);
                 record.setFailureReason(e.getLocalizedMessage());
                 log.warn("Job {} failed to send notification for user {}: {}", job.getId(),
-                        notificationAction.getUserExternalId(), e.getMessage());
+                        notificationAction.userExternalId(), e.getMessage());
             } catch (RuntimeException e) {
                 record.setStatus(ActionStatus.FAILED);
                 record.setFailureReason("Internal Server Error: " + e.getLocalizedMessage());
                 log.error("Job {} hit an unexpected error sending notification for user {}", job.getId(),
-                        notificationAction.getUserExternalId(), e);
+                        notificationAction.userExternalId(), e);
             }
 
             actionRepository.save(record);
         } catch (RuntimeException e) {
             // the executor discards whatever a task throws, so a failed save would otherwise disappear silently
             log.error("Job {} could not record the notification action for user {}", job.getId(),
-                    notificationAction.getUserExternalId(), e);
+                    notificationAction.userExternalId(), e);
         }
     }
 
@@ -263,7 +263,7 @@ public class NotificationService {
 
     private BulkNotificationJob createBulkJob(BulkNotificationRequest request) {
         BulkNotificationJob job = new BulkNotificationJob();
-        job.setActionCount(request.getNotifications().size());
+        job.setActionCount(request.notifications().size());
         job.setStatus(JobStatus.PENDING);
 
         return jobRepository.save(job);

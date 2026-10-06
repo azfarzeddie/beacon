@@ -35,10 +35,10 @@ class PreferencesServiceSpec extends Specification {
     def "addUserPreference persists a new preference and returns the created response"() {
         given:
         def request = new CreateUserPreferenceRequest(
-                userExternalId: "ext-1",
-                notificationType: "welcome",
-                channel: Channel.EMAIL,
-                preference: PreferenceType.ENABLED
+                "ext-1",
+                "welcome",
+                Channel.EMAIL,
+                PreferenceType.ENABLED
         )
         def user = userWithId(1L)
 
@@ -65,10 +65,10 @@ class PreferencesServiceSpec extends Specification {
     def "addUserPreference throws UserNotFoundException when the user does not exist"() {
         given:
         def request = new CreateUserPreferenceRequest(
-                userExternalId: "unknown",
-                notificationType: "welcome",
-                channel: Channel.EMAIL,
-                preference: PreferenceType.ENABLED
+                "unknown",
+                "welcome",
+                Channel.EMAIL,
+                PreferenceType.ENABLED
         )
 
         when:
@@ -83,10 +83,10 @@ class PreferencesServiceSpec extends Specification {
     def "addUserPreference throws PreferenceAlreadyExists when the same user already has a preference for the type and channel"() {
         given:
         def request = new CreateUserPreferenceRequest(
-                userExternalId: "ext-1",
-                notificationType: "welcome",
-                channel: Channel.EMAIL,
-                preference: PreferenceType.ENABLED
+                "ext-1",
+                "welcome",
+                Channel.EMAIL,
+                PreferenceType.ENABLED
         )
         def user = userWithId(1L)
 
@@ -103,10 +103,10 @@ class PreferencesServiceSpec extends Specification {
     def "addUserPreference lets a second user set a type and channel another user already uses"() {
         given: "a preference for this type and channel already belongs to user 1"
         def request = new CreateUserPreferenceRequest(
-                userExternalId: "ext-2",
-                notificationType: "welcome",
-                channel: Channel.EMAIL,
-                preference: PreferenceType.ENABLED
+                "ext-2",
+                "welcome",
+                Channel.EMAIL,
+                PreferenceType.ENABLED
         )
         def secondUser = userWithId(2L, "ext-2")
 
@@ -226,10 +226,10 @@ class PreferencesServiceSpec extends Specification {
     def "addUserPreference revives a soft-deleted preference instead of inserting a duplicate"() {
         given: "the user previously deleted this preference, leaving an inactive row in the unique slot"
         def request = new CreateUserPreferenceRequest(
-                userExternalId: "ext-1",
-                notificationType: "welcome",
-                channel: Channel.EMAIL,
-                preference: PreferenceType.DISABLED
+                "ext-1",
+                "welcome",
+                Channel.EMAIL,
+                PreferenceType.DISABLED
         )
         def user = userWithId(1L)
         def softDeleted = new UserPreference(
@@ -270,7 +270,7 @@ class PreferencesServiceSpec extends Specification {
 
         when:
         GetPreferenceResponse response = preferencesService.updateUserPreference(
-                "ext-1", preferenceId, new UpdateUserPreferenceRequest(preference: PreferenceType.DISABLED))
+                "ext-1", preferenceId, new UpdateUserPreferenceRequest(PreferenceType.DISABLED))
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
@@ -290,7 +290,7 @@ class PreferencesServiceSpec extends Specification {
 
         when:
         preferencesService.updateUserPreference(
-                "ext-1", preferenceId, new UpdateUserPreferenceRequest(preference: PreferenceType.DISABLED))
+                "ext-1", preferenceId, new UpdateUserPreferenceRequest(PreferenceType.DISABLED))
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
@@ -302,7 +302,7 @@ class PreferencesServiceSpec extends Specification {
     def "updateUserPreference throws UserNotFoundException when the user does not exist"() {
         when:
         preferencesService.updateUserPreference(
-                "unknown", UUID.randomUUID(), new UpdateUserPreferenceRequest(preference: PreferenceType.DISABLED))
+                "unknown", UUID.randomUUID(), new UpdateUserPreferenceRequest(PreferenceType.DISABLED))
 
         then:
         1 * userRepository.findByExternalId("unknown") >> Optional.empty()

@@ -27,20 +27,20 @@ public class UserService {
     @Transactional
     public CreateUserResponse createUser(CreateUserRequest request) {
         // check if a user with the same externalId exists in the table or not
-        if (userRepository.findByExternalId(request.getExternalId()).isPresent()) {
-            throw new UserAlreadyExistsException("A user with ID: " + request.getExternalId() + " already exists.");
+        if (userRepository.findByExternalId(request.externalId()).isPresent()) {
+            throw new UserAlreadyExistsException("A user with ID: " + request.externalId() + " already exists.");
         }
 
         User user = new User();
-        user.setExternalId(request.getExternalId());
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        user.setExternalId(request.externalId());
+        user.setName(request.name());
+        user.setEmail(request.email());
+        user.setPhone(request.phone());
 
-        request.getDeviceTokens().forEach(e -> {
+        request.deviceTokens().forEach(e -> {
             DeviceToken token = new DeviceToken();
-            token.setToken(e.getToken());
-            token.setPlatform(e.getPlatform());
+            token.setToken(e.token());
+            token.setPlatform(e.platform());
             user.addDeviceToken(token);
         });
 
@@ -61,20 +61,20 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("No user with ID: " + id + " found."));
 
-        Optional<User> otherExtId = userRepository.findByExternalId(request.getExternalId());
+        Optional<User> otherExtId = userRepository.findByExternalId(request.externalId());
         if (otherExtId.isPresent() && !otherExtId.get().equals(user)) {
             throw new UserAlreadyExistsException("User with external ID: "
-                    + request.getExternalId() + " already exists.");
+                    + request.externalId() + " already exists.");
         }
-        Optional<User> otherEmail = userRepository.findByEmail(request.getEmail());
+        Optional<User> otherEmail = userRepository.findByEmail(request.email());
         if (otherEmail.isPresent() && !otherEmail.get().equals(user)) {
-            throw new UserAlreadyExistsException("User with email: " + request.getEmail() + " already exists.");
+            throw new UserAlreadyExistsException("User with email: " + request.email() + " already exists.");
         }
 
-        user.setExternalId(request.getExternalId());
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        user.setExternalId(request.externalId());
+        user.setName(request.name());
+        user.setEmail(request.email());
+        user.setPhone(request.phone());
 
         userRepository.save(user);
         return CreateUserResponse.from(user);

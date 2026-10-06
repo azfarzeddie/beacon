@@ -22,10 +22,10 @@ class TemplateServiceSpec extends Specification {
     def "createTemplate persists a new template and returns the created response"() {
         given:
         def request = new CreateTemplateRequest(
-                templateBody: "Hello {{name}}",
-                notificationType: "welcome",
-                channel: Channel.EMAIL,
-                subject: "Welcome!"
+                "Hello {{name}}",
+                "welcome",
+                Channel.EMAIL,
+                "Welcome!"
         )
 
         when:
@@ -47,7 +47,7 @@ class TemplateServiceSpec extends Specification {
 
     def "createTemplate does not overwrite the subject when none is provided"() {
         given:
-        def request = new CreateTemplateRequest(templateBody: "Hi", notificationType: "otp", channel: Channel.SMS)
+        def request = new CreateTemplateRequest("Hi", "otp", Channel.SMS, null)
 
         when:
         templateService.createTemplate(request)
@@ -59,7 +59,7 @@ class TemplateServiceSpec extends Specification {
 
     def "createTemplate throws TemplateAlreadyExists when a template for the type and channel already exists"() {
         given:
-        def request = new CreateTemplateRequest(templateBody: "Hi", notificationType: "otp", channel: Channel.SMS)
+        def request = new CreateTemplateRequest("Hi", "otp", Channel.SMS, null)
 
         when:
         templateService.createTemplate(request)
@@ -73,7 +73,7 @@ class TemplateServiceSpec extends Specification {
 
     def "createTemplate maps a unique constraint violation from a concurrent insert to TemplateAlreadyExists"() {
         given:
-        def request = new CreateTemplateRequest(templateBody: "Hi", notificationType: "otp", channel: Channel.SMS)
+        def request = new CreateTemplateRequest("Hi", "otp", Channel.SMS, null)
 
         when:
         templateService.createTemplate(request)

@@ -41,10 +41,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification resolves the template and dispatches it through the matching channel"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
 
@@ -67,7 +67,7 @@ class NotificationServiceSpec extends Specification {
 
     def "sendNotification throws UserNotFoundException when the user does not exist"() {
         given:
-        def request = new SendNotificationRequest(userExternalId: "missing", channel: Channel.EMAIL, notificationType: "welcome")
+        def request = new SendNotificationRequest("missing", Channel.EMAIL, "welcome", null)
 
         when:
         notificationService.sendNotification(request)
@@ -81,7 +81,7 @@ class NotificationServiceSpec extends Specification {
 
     def "sendNotification throws TemplateNotFound when no template matches the type and channel"() {
         given:
-        def request = new SendNotificationRequest(userExternalId: "ext-1", channel: Channel.SMS, notificationType: "otp")
+        def request = new SendNotificationRequest("ext-1", Channel.SMS, "otp", null)
 
         when:
         notificationService.sendNotification(request)
@@ -97,10 +97,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification wraps a template resolution failure as TemplateNotResolved"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: new HashMap<String, String>()
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                new HashMap<String, String>()
         )
 
         when:
@@ -118,10 +118,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification resolves against an empty map when the request omits templateVariables"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: null
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                null
         )
 
         when:
@@ -142,10 +142,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification dispatches a placeholder-free template when the request omits templateVariables"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: null
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                null
         )
         def action = Mock(NotificationAction)
 
@@ -167,10 +167,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification throws NotificationDispatchException when the channel fails to send"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
 
@@ -191,10 +191,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification proceeds when the user has an ENABLED preference for the type and channel"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
         def preference = new UserPreference(userId: 1L, notificationType: "welcome", channel: Channel.EMAIL, preference: PreferenceType.ENABLED)
@@ -216,10 +216,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification sends the notification when no preference exists for the user, type, and channel"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
 
@@ -240,10 +240,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification resolves the subject stored on the template"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
 
@@ -264,10 +264,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification leaves the subject unresolved when the template has no subject"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
         def template = new Template(channel: Channel.EMAIL, notificationType: "welcome", body: "Hello {{name}}")
@@ -294,10 +294,10 @@ class NotificationServiceSpec extends Specification {
                 new DeviceToken(token: "device-token-2")
         ]
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.PUSH,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.PUSH,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
         def template = new Template(channel: Channel.PUSH, notificationType: "welcome", body: "Hello {{name}}")
@@ -317,7 +317,7 @@ class NotificationServiceSpec extends Specification {
 
     def "sendNotification throws NotificationNotAllowed when the user has disabled the type and channel"() {
         given:
-        def request = new SendNotificationRequest(userExternalId: "ext-1", channel: Channel.EMAIL, notificationType: "welcome")
+        def request = new SendNotificationRequest("ext-1", Channel.EMAIL, "welcome", null)
         def preference = new UserPreference(userId: 1L, notificationType: "welcome", channel: Channel.EMAIL, preference: PreferenceType.DISABLED)
 
         when:
@@ -334,10 +334,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification records a SUCCESS action with the resolved message details"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
         NotificationActionRecord saved = null
@@ -369,10 +369,10 @@ class NotificationServiceSpec extends Specification {
         def user = aUser()
         user.deviceTokens = [new DeviceToken(token: "device-token-1")]
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.PUSH,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.PUSH,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
         def template = new Template(channel: Channel.PUSH, notificationType: "welcome", body: "Hello {{name}}")
@@ -397,7 +397,7 @@ class NotificationServiceSpec extends Specification {
 
     def "sendNotification records a SKIPPED action and rethrows when the user has disabled the channel"() {
         given:
-        def request = new SendNotificationRequest(userExternalId: "ext-1", channel: Channel.EMAIL, notificationType: "welcome")
+        def request = new SendNotificationRequest("ext-1", Channel.EMAIL, "welcome", null)
         def preference = new UserPreference(userId: 1L, notificationType: "welcome", channel: Channel.EMAIL, preference: PreferenceType.DISABLED)
         NotificationActionRecord saved = null
 
@@ -419,10 +419,10 @@ class NotificationServiceSpec extends Specification {
     def "sendNotification records a FAILED action and rethrows when the channel fails to send"() {
         given:
         def request = new SendNotificationRequest(
-                userExternalId: "ext-1",
-                channel: Channel.EMAIL,
-                notificationType: "welcome",
-                templateVariables: [name: "Ada"]
+                "ext-1",
+                Channel.EMAIL,
+                "welcome",
+                [name: "Ada"]
         )
         def action = Mock(NotificationAction)
         NotificationActionRecord saved = null

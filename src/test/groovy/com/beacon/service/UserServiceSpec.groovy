@@ -22,13 +22,13 @@ class UserServiceSpec extends Specification {
     def "createUser persists a new user with its device tokens and returns the created response"() {
         given:
         def request = new CreateUserRequest(
-                externalId: "ext-1",
-                name: "Ada Lovelace",
-                email: "ada@example.com",
-                phone: "555-0100",
-                deviceTokens: [
-                        new CreateUserRequest.DeviceToken(token: "token-1", platform: Platform.ANDROID),
-                        new CreateUserRequest.DeviceToken(token: "token-2", platform: Platform.IOS)
+                "ext-1",
+                "Ada Lovelace",
+                "ada@example.com",
+                "555-0100",
+                [
+                        new CreateUserRequest.DeviceToken("token-1", Platform.ANDROID),
+                        new CreateUserRequest.DeviceToken("token-2", Platform.IOS)
                 ]
         )
 
@@ -56,7 +56,7 @@ class UserServiceSpec extends Specification {
 
     def "createUser throws UserAlreadyExistsException when the externalId is already taken"() {
         given:
-        def request = new CreateUserRequest(externalId: "ext-1", name: "Ada", email: "ada@example.com")
+        def request = new CreateUserRequest("ext-1", "Ada", "ada@example.com", null, null)
 
         when:
         userService.createUser(request)

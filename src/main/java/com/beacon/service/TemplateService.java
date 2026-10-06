@@ -33,24 +33,24 @@ public class TemplateService {
     public CreateTemplateResponse createTemplate(CreateTemplateRequest request) {
         // check if a template for this notification type and channel combination already exists
         if (templateRepository.findByNotificationTypeAndChannel(
-                request.getNotificationType(), request.getChannel()).isPresent()) {
-            throw new TemplateAlreadyExists("A template for " + request.getNotificationType()
-                    + " and " + request.getChannel() + " already exists. Please call the PUT endpoint to update it.");
+                request.notificationType(), request.channel()).isPresent()) {
+            throw new TemplateAlreadyExists("A template for " + request.notificationType()
+                    + " and " + request.channel() + " already exists. Please call the PUT endpoint to update it.");
         }
 
         Template template = new Template();
-        template.setChannel(request.getChannel());
-        template.setNotificationType(request.getNotificationType());
-        template.setBody(request.getTemplateBody());
-        if (request.getSubject() != null) {
-            template.setSubject(request.getSubject());
+        template.setChannel(request.channel());
+        template.setNotificationType(request.notificationType());
+        template.setBody(request.templateBody());
+        if (request.subject() != null) {
+            template.setSubject(request.subject());
         }
 
         try {
             templateRepository.saveAndFlush(template);
         } catch (DataIntegrityViolationException e) {
-            throw new TemplateAlreadyExists("A template for " + request.getNotificationType() + " and "
-                    + request.getChannel() + " already exists. Please call the PUT endpoint to update it.");
+            throw new TemplateAlreadyExists("A template for " + request.notificationType() + " and "
+                    + request.channel() + " already exists. Please call the PUT endpoint to update it.");
         }
 
         return CreateTemplateResponse.from(template);
