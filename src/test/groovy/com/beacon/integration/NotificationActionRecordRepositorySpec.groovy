@@ -1,7 +1,8 @@
-package com.beacon.repository
+package com.beacon.integration
 
-import com.beacon.integration.AbstractIntegrationSpec
 import com.beacon.model.MessageDetails
+import com.beacon.repository.BulkNotificationJobRepository
+import com.beacon.repository.NotificationActionRecordRepository
 import com.beacon.model.entity.BulkNotificationJob
 import com.beacon.model.entity.NotificationActionRecord
 import jakarta.persistence.EntityManager

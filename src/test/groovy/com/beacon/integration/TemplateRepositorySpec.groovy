@@ -1,7 +1,7 @@
-package com.beacon.repository
+package com.beacon.integration
 
-import com.beacon.integration.AbstractIntegrationSpec
 import com.beacon.model.entity.Template
+import com.beacon.repository.TemplateRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.dao.DataIntegrityViolationException
 
