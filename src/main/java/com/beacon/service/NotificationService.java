@@ -1,6 +1,7 @@
 package com.beacon.service;
 
 import com.beacon.exception.NotificationException.BulkNotificationJobNotFound;
+import com.beacon.exception.NotificationException.ChannelNotAvailableForUser;
 import com.beacon.exception.NotificationException.NotificationNotAllowed;
 import com.beacon.model.MessageDetails;
 import com.beacon.model.NotificationContext;
@@ -70,7 +71,8 @@ public class NotificationService {
             record.setFailureReason(notAllowed.getLocalizedMessage());
             actionRepository.save(record);
             throw notAllowed;
-        } catch (UserNotFoundException | TemplateNotFound | TemplateNotResolved | NotificationDispatchException e) {
+        } catch (UserNotFoundException | TemplateNotFound | TemplateNotResolved |
+                 ChannelNotAvailableForUser | NotificationDispatchException e) {
             record.setStatus(ActionStatus.FAILED);
             record.setFailureReason(e.getLocalizedMessage());
             actionRepository.save(record);
@@ -101,6 +103,8 @@ public class NotificationService {
                     + " has disabled all notifications for type " + request.notificationType() + " on channel "
                     + request.channel().toString());
         }
+
+        validateChannelData(request, user);
 
         // fetch the template for this combination of notificationType and channel
         Optional<Template> templateFound = templateRepository.findByNotificationTypeAndChannel(request.notificationType(), request.channel());
@@ -141,6 +145,25 @@ public class NotificationService {
         }
 
         return context;
+    }
+
+    /**
+     * Rejects a send the user cannot receive, before any provider is called.
+     */
+    private void validateChannelData(SendNotificationRequest request, User user) {
+        boolean reachable = switch (request.channel()) {
+            case PUSH -> user.getDeviceTokens() != null && !user.getDeviceTokens().isEmpty();
+            case SMS -> user.getPhone() != null && !user.getPhone().isBlank();
+            case EMAIL -> user.getEmail() != null && !user.getEmail().isBlank();
+        };
+        if (!reachable) {
+            throw new ChannelNotAvailableForUser("User with externalId: " + request.userExternalId()
+                    + " has no " + switch (request.channel()) {
+                case PUSH -> "device tokens";
+                case SMS -> "phone number";
+                case EMAIL -> "email address";
+            } + " to receive notifications on channel " + request.channel());
+        }
     }
 
     public BulkNotificationResponse sendBulkNotifications(BulkNotificationRequest request) {
@@ -232,7 +255,8 @@ public class NotificationService {
                 record.setFailureReason(notAllowed.getLocalizedMessage());
                 log.info("Job {} skipped notification for user {}: {}", job.getId(),
                         notificationAction.userExternalId(), notAllowed.getMessage());
-            } catch (UserNotFoundException | TemplateNotFound | TemplateNotResolved | NotificationDispatchException e) {
+            } catch (UserNotFoundException | TemplateNotFound | TemplateNotResolved |
+                     ChannelNotAvailableForUser | NotificationDispatchException e) {
                 record.setStatus(ActionStatus.FAILED);
                 record.setFailureReason(e.getLocalizedMessage());
                 log.warn("Job {} failed to send notification for user {}: {}", job.getId(),

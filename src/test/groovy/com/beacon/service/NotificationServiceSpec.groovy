@@ -477,6 +477,57 @@ class NotificationServiceSpec extends Specification {
         saved.messageDetails == null
     }
 
+    def "sendNotification rejects a send the user cannot receive, before the template or any provider is touched"() {
+        given:
+        def user = new User(id: 1L, externalId: "ext-1", name: "Ada", email: email, phone: phone)
+        deviceTokens.each { user.addDeviceToken(new DeviceToken(token: it, platform: Platform.ANDROID)) }
+        def request = new SendNotificationRequest("ext-1", channel, "welcome", null)
+        NotificationActionRecord saved = null
+
+        when:
+        notificationService.sendNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(*_) >> Optional.empty()
+        0 * templateRepository.findByNotificationTypeAndChannel(*_)
+        0 * notificationActionFactory.getAction(_)
+        1 * actionRepository.save(_) >> { NotificationActionRecord record -> saved = record }
+        def e = thrown(NotificationException.ChannelNotAvailableForUser)
+        e.message == "User with externalId: ext-1 has no ${missing} to receive notifications on channel ${channel}"
+
+        and: "the attempt is recorded as FAILED with the same reason, not as an internal error"
+        saved.status == ActionStatus.FAILED
+        saved.failureReason == e.message
+
+        where:
+        channel       | phone      | email         | deviceTokens | missing
+        Channel.SMS   | null       | "a@b.com"     | ["t"]        | "phone number"
+        Channel.SMS   | "  "       | "a@b.com"     | ["t"]        | "phone number"
+        Channel.EMAIL | "555-0100" | null          | ["t"]        | "email address"
+        Channel.EMAIL | "555-0100" | ""            | ["t"]        | "email address"
+        Channel.PUSH  | "555-0100" | "a@b.com"     | []           | "device tokens"
+    }
+
+    def "sendNotification only requires the contact detail of the requested channel"() {
+        given:
+        def user = new User(id: 1L, externalId: "ext-1", name: "Ada", email: null, phone: "555-0100")
+        def action = Mock(NotificationAction)
+        def template = new Template(channel: Channel.SMS, notificationType: "otp", body: "Code")
+
+        when:
+        notificationService.sendNotification(new SendNotificationRequest("ext-1", Channel.SMS, "otp", null))
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(user)
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(*_) >> Optional.empty()
+        1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.of(template)
+        1 * templateService.resolveTemplate("Code", [:]) >> "Code"
+        1 * notificationActionFactory.getAction(Channel.SMS) >> action
+        1 * action.send(_) >> true
+        noExceptionThrown()
+    }
+
     def "getBulkNotificationJob returns the job's status, counts and timestamps"() {
         given:
         def jobId = UUID.randomUUID()

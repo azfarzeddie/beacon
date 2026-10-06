@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 
 import static com.beacon.exception.NotificationException.BulkNotificationJobNotFound;
+import static com.beacon.exception.NotificationException.ChannelNotAvailableForUser;
 import static com.beacon.exception.NotificationException.NotificationDispatchException;
 import static com.beacon.exception.NotificationException.NotificationNotAllowed;
 
@@ -36,6 +37,17 @@ public class NotificationExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(ChannelNotAvailableForUser.class)
+    ResponseEntity<ErrorResponse> handleChannelNotAvailableForUserException(ChannelNotAvailableForUser e, HttpServletRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .errorCode("CHANNEL_NOT_AVAILABLE_FOR_USER")
+                .errorMessage(e.getLocalizedMessage())
+                .timestamp(Instant.now())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(response);
     }
 
     @ExceptionHandler(BulkNotificationJobNotFound.class)

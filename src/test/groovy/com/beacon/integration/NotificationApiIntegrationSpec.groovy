@@ -184,6 +184,39 @@ class NotificationApiIntegrationSpec extends AbstractIntegrationSpec {
                 .andExpect(jsonPath('$.errorCode').value("NOTIFICATION_DISPATCH_FAILED"))
     }
 
+    def "POST /api/v1/notifications returns 422 when the user has no phone number for an SMS"() {
+        given:
+        userRepository.save(new User(externalId: "ext-notify-nophone", name: "Ada", email: "nophone@example.com"))
+        templateRepository.save(new Template(channel: Channel.SMS, notificationType: "otp", body: "Your code is {{code}}"))
+        def payload = [
+                userExternalId   : "ext-notify-nophone",
+                channel          : "SMS",
+                notificationType : "otp",
+                templateVariables: [code: "123456"]
+        ]
+
+        expect:
+        mockMvc.perform(post("/api/v1/notifications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath('$.errorCode').value("CHANNEL_NOT_AVAILABLE_FOR_USER"))
+    }
+
+    def "POST /api/v1/notifications returns 422 when the user has no device tokens for a PUSH"() {
+        given:
+        userRepository.save(new User(externalId: "ext-notify-notoken", name: "Ada", email: "notoken@example.com"))
+        templateRepository.save(new Template(channel: Channel.PUSH, notificationType: "alert", body: "Hi"))
+        def payload = [userExternalId: "ext-notify-notoken", channel: "PUSH", notificationType: "alert"]
+
+        expect:
+        mockMvc.perform(post("/api/v1/notifications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath('$.errorCode').value("CHANNEL_NOT_AVAILABLE_FOR_USER"))
+    }
+
     def "POST /api/v1/notifications returns 403 when the user has disabled the notification type and channel"() {
         given:
         def user = userRepository.save(new User(externalId: "ext-notify-4", name: "Ada", email: "ada4@example.com"))

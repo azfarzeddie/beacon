@@ -19,4 +19,10 @@ public class NotificationException {
             super(message);
         }
     }
+
+    public static class ChannelNotAvailableForUser extends RuntimeException {
+        public ChannelNotAvailableForUser(String message) {
+            super(message);
+        }
+    }
 }
