@@ -40,7 +40,7 @@ class NotificationExceptionHandlerSpec extends Specification {
         response.body.path == "/api/v1/notifications"
     }
 
-    def "maps ChannelNotAvailableForUser to a 422 UNPROCESSABLE_ENTITY error response"() {
+    def "maps ChannelNotAvailableForUser to a 422 UNPROCESSABLE_CONTENT error response"() {
         given:
         def exception = new NotificationException.ChannelNotAvailableForUser(
                 "User with externalId: ext-1 has no phone number to receive notifications on channel SMS")
@@ -49,7 +49,7 @@ class NotificationExceptionHandlerSpec extends Specification {
         def response = handler.handleChannelNotAvailableForUserException(exception, request)
 
         then:
-        response.statusCode == HttpStatus.UNPROCESSABLE_ENTITY
+        response.statusCode == HttpStatus.UNPROCESSABLE_CONTENT
         response.body.errorCode == "CHANNEL_NOT_AVAILABLE_FOR_USER"
         response.body.errorMessage == "User with externalId: ext-1 has no phone number to receive notifications on channel SMS"
         response.body.path == "/api/v1/notifications"

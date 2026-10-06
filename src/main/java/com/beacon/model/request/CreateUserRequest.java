@@ -1,6 +1,8 @@
 package com.beacon.model.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
@@ -13,13 +15,15 @@ public record CreateUserRequest(
         @NotNull @NotEmpty String name,
         @NotNull @Email @NotEmpty String email,
         String phone,
-        List<DeviceToken> deviceTokens) {
+        @Valid List<DeviceToken> deviceTokens) {
 
     public CreateUserRequest {
         deviceTokens = deviceTokens == null ? List.of() : deviceTokens;
     }
 
-    public record DeviceToken(String token, Platform platform) {
+    public record DeviceToken(
+            @NotBlank String token,
+            @NotNull Platform platform) {
     }
 
 }

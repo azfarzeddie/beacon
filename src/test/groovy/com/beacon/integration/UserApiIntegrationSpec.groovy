@@ -1,6 +1,7 @@
 package com.beacon.integration
 
 import com.beacon.repository.UserRepository
+import jakarta.persistence.EntityManager
 import tools.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -23,6 +24,9 @@ class UserApiIntegrationSpec extends AbstractIntegrationSpec {
 
     @Autowired
     ObjectMapper objectMapper
+
+    @Autowired
+    EntityManager entityManager
 
     def "POST /api/v1/users creates a user together with its device tokens"() {
         given:
@@ -76,6 +80,54 @@ class UserApiIntegrationSpec extends AbstractIntegrationSpec {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath('$.errorCode').value("VALIDATION_ERROR"))
                 .andExpect(jsonPath('$.validationErrors[*].field').value(hasItems("name", "email")))
+    }
+
+    def "POST /api/v1/users rejects invalid device tokens with 400 and field-level errors"() {
+        given:
+        def payload = [externalId: "ext-310", name: "Ada", email: "ada310@example.com",
+                       deviceTokens: [[token: " ", platform: "IOS"], [token: "tok-ok"]]]
+
+        expect:
+        mockMvc.perform(post("/api/v1/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath('$.errorCode').value("VALIDATION_ERROR"))
+                .andExpect(jsonPath('$.validationErrors[*].field')
+                        .value(hasItems("deviceTokens[0].token", "deviceTokens[1].platform")))
+    }
+
+    def "POST /api/v1/users reassigns a device token that is already registered to another user"() {
+        given:
+        def first = [externalId: "ext-320", name: "Ada", email: "ada320@example.com",
+                     deviceTokens: [[token: "shared-tok", platform: "ANDROID"]]]
+        def second = [externalId: "ext-321", name: "Grace", email: "grace321@example.com",
+                      deviceTokens: [[token: "shared-tok", platform: "IOS"]]]
+        def firstId = createdUserId(first)
+
+        when:
+        def secondId = createdUserId(second)
+
+        then: "the second registration succeeds instead of failing on the unique token"
+        secondId != firstId
+
+        and: "the token now belongs to the second user only (reloaded, as separate requests would see it)"
+        entityManager.flush()
+        entityManager.clear()
+        mockMvc.perform(get("/api/v1/users/{id}", secondId))
+                .andExpect(jsonPath('$.deviceTokens[0].token').value("shared-tok"))
+                .andExpect(jsonPath('$.deviceTokens[0].platform').value("IOS"))
+        mockMvc.perform(get("/api/v1/users/{id}", firstId))
+                .andExpect(jsonPath('$.deviceTokens').isEmpty())
+    }
+
+    private Long createdUserId(Map payload) {
+        def body = mockMvc.perform(post("/api/v1/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isCreated())
+                .andReturn().response.contentAsString
+        objectMapper.readTree(body).get("id").asLong()
     }
 
     def "GET /api/v1/users/{id} returns the user with its device tokens"() {

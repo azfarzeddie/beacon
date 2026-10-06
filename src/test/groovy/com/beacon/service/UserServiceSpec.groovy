@@ -6,6 +6,7 @@ import com.beacon.model.entity.User
 import com.beacon.model.request.CreateUserRequest
 import com.beacon.model.response.CreateUserResponse
 import com.beacon.model.response.GetUserResponse
+import com.beacon.repository.DeviceTokenRepository
 import com.beacon.repository.UserRepository
 import spock.lang.Specification
 import spock.lang.Subject
@@ -15,9 +16,10 @@ import static com.beacon.model.Types.Platform
 class UserServiceSpec extends Specification {
 
     UserRepository userRepository = Mock()
+    DeviceTokenRepository deviceTokenRepository = Mock()
 
     @Subject
-    UserService userService = new UserService(userRepository)
+    UserService userService = new UserService(userRepository, deviceTokenRepository)
 
     def "createUser persists a new user with its device tokens and returns the created response"() {
         given:
@@ -37,6 +39,7 @@ class UserServiceSpec extends Specification {
 
         then:
         1 * userRepository.findByExternalId("ext-1") >> Optional.empty()
+        2 * deviceTokenRepository.findByToken(_) >> Optional.empty()
         1 * userRepository.save({ User u ->
             u.externalId == "ext-1" &&
                     u.name == "Ada Lovelace" &&
@@ -52,6 +55,51 @@ class UserServiceSpec extends Specification {
         response.name() == "Ada Lovelace"
         response.email() == "ada@example.com"
         response.phone() == "555-0100"
+    }
+
+    def "createUser reassigns an already registered device token to the new user instead of inserting a duplicate"() {
+        given:
+        def previousOwner = new User(id: 7L, externalId: "ext-old")
+        def existing = new DeviceToken(id: 5L, token: "shared", platform: Platform.ANDROID, user: previousOwner)
+        def request = new CreateUserRequest("ext-2", "Grace", "grace@example.com", null,
+                [new CreateUserRequest.DeviceToken("shared", Platform.IOS)])
+        User saved = null
+
+        when:
+        userService.createUser(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-2") >> Optional.empty()
+        1 * deviceTokenRepository.findByToken("shared") >> Optional.of(existing)
+        1 * userRepository.save(_ as User) >> { User u -> saved = u; u }
+
+        and: "the very same row now belongs to the new user, with the platform it re-registered with"
+        saved.deviceTokens.size() == 1
+        saved.deviceTokens[0].is(existing)
+        existing.user.is(saved)
+        existing.platform == Platform.IOS
+    }
+
+    def "createUser registers a token repeated within the request only once"() {
+        given:
+        def request = new CreateUserRequest("ext-3", "Ada", "ada@example.com", null, [
+                new CreateUserRequest.DeviceToken("dup", Platform.ANDROID),
+                new CreateUserRequest.DeviceToken("dup", Platform.IOS),
+                new CreateUserRequest.DeviceToken("other", Platform.WEB)
+        ])
+        User saved = null
+
+        when:
+        userService.createUser(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-3") >> Optional.empty()
+        2 * deviceTokenRepository.findByToken(_) >> Optional.empty()
+        1 * userRepository.save(_ as User) >> { User u -> saved = u; u }
+
+        and: "the first occurrence wins"
+        saved.deviceTokens*.token == ["dup", "other"]
+        saved.deviceTokens[0].platform == Platform.ANDROID
     }
 
     def "createUser throws UserAlreadyExistsException when the externalId is already taken"() {
