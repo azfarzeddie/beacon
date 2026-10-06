@@ -32,7 +32,7 @@ class TemplateServiceSpec extends Specification {
         CreateTemplateResponse response = templateService.createTemplate(request)
 
         then:
-        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.empty()
+        0 * templateRepository.findByNotificationTypeAndChannel(*_)
         1 * templateRepository.saveAndFlush({ Template t ->
             t.channel == Channel.EMAIL &&
                     t.notificationType == "welcome" &&
@@ -53,33 +53,18 @@ class TemplateServiceSpec extends Specification {
         templateService.createTemplate(request)
 
         then:
-        1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.empty()
         1 * templateRepository.saveAndFlush({ Template t -> t.subject == null }) >> { Template t -> t }
     }
 
-    def "createTemplate throws TemplateAlreadyExists when a template for the type and channel already exists"() {
+    def "createTemplate maps a unique constraint violation to TemplateAlreadyExists"() {
         given:
         def request = new CreateTemplateRequest("Hi", "otp", Channel.SMS, null)
 
         when:
         templateService.createTemplate(request)
 
-        then:
-        1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.of(new Template())
-        0 * templateRepository.saveAndFlush(_)
-        def e = thrown(TemplateException.TemplateAlreadyExists)
-        e.message == "A template for otp and SMS already exists. Please call the PUT endpoint to update it."
-    }
-
-    def "createTemplate maps a unique constraint violation from a concurrent insert to TemplateAlreadyExists"() {
-        given:
-        def request = new CreateTemplateRequest("Hi", "otp", Channel.SMS, null)
-
-        when:
-        templateService.createTemplate(request)
-
-        then: "the pre-check passes because the other request has not committed yet"
-        1 * templateRepository.findByNotificationTypeAndChannel("otp", Channel.SMS) >> Optional.empty()
+        then: "the database constraint is the only duplicate check"
+        0 * templateRepository.findByNotificationTypeAndChannel(*_)
         1 * templateRepository.saveAndFlush(_ as Template) >> { throw new DataIntegrityViolationException("uk_channel_notification_type") }
         def e = thrown(TemplateException.TemplateAlreadyExists)
         e.message == "A template for otp and SMS already exists. Please call the PUT endpoint to update it."

@@ -31,13 +31,6 @@ public class TemplateService {
 
     @Transactional
     public CreateTemplateResponse createTemplate(CreateTemplateRequest request) {
-        // check if a template for this notification type and channel combination already exists
-        if (templateRepository.findByNotificationTypeAndChannel(
-                request.notificationType(), request.channel()).isPresent()) {
-            throw new TemplateAlreadyExists("A template for " + request.notificationType()
-                    + " and " + request.channel() + " already exists. Please call the PUT endpoint to update it.");
-        }
-
         Template template = new Template();
         template.setChannel(request.channel());
         template.setNotificationType(request.notificationType());
