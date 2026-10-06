@@ -39,7 +39,7 @@ class TemplateExceptionHandlerSpec extends Specification {
 
     def "maps TemplateNotResolved to a 422 UNPROCESSABLE_ENTITY error response"() {
         given:
-        def exception = new TemplateException.TemplateNotResolved("Failed to resolve template: welcome with variables: {}")
+        def exception = new TemplateException.TemplateNotResolved("Failed to resolve template 1: Unresolved template variables: name")
 
         when:
         def response = handler.handleTemplateNotResolvedException(exception, request)
@@ -47,7 +47,7 @@ class TemplateExceptionHandlerSpec extends Specification {
         then:
         response.statusCode == HttpStatus.UNPROCESSABLE_ENTITY
         response.body.errorCode == "TEMPLATE_NOT_RESOLVED"
-        response.body.errorMessage == "Failed to resolve template: welcome with variables: {}"
+        response.body.errorMessage == "Failed to resolve template 1: Unresolved template variables: name"
         response.body.path == "/api/v1/templates"
     }
 }

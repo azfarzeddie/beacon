@@ -136,7 +136,37 @@ class NotificationServiceSpec extends Specification {
 
         and: "the failure surfaces as TemplateNotResolved rather than an NPE from building the message"
         def e = thrown(TemplateException.TemplateNotResolved)
-        e.message.contains("with variables: []")
+        e.message.contains("Unresolved template variable: name")
+    }
+
+    def "sendNotification reports the template id and unresolved names but never the variable values"() {
+        given:
+        def templateId = UUID.randomUUID()
+        def template = aTemplate()
+        template.id = templateId
+        def request = new SendNotificationRequest("ext-1", Channel.EMAIL, "welcome", [otp: "482913"])
+
+        when:
+        notificationService.sendNotification(request)
+
+        then:
+        1 * userRepository.findByExternalId("ext-1") >> Optional.of(aUser())
+        1 * preferenceRepository.findByUserIdAndNotificationTypeAndChannelAndActiveTrue(*_) >> Optional.empty()
+        1 * templateRepository.findByNotificationTypeAndChannel("welcome", Channel.EMAIL) >> Optional.of(template)
+        1 * templateService.resolveTemplate("Hello {{name}}", [otp: "482913"]) >>
+                { throw new IllegalArgumentException("Unresolved template variables: name") }
+
+        and: "the persisted failure reason carries the same sanitised message"
+        1 * actionRepository.save({
+            it.failureReason == "Failed to resolve template ${templateId}: Unresolved template variables: name"
+        })
+
+        and:
+        def e = thrown(TemplateException.TemplateNotResolved)
+        e.message == "Failed to resolve template ${templateId}: Unresolved template variables: name"
+        !e.message.contains("482913")
+        !(e.message =~ /@[0-9a-f]{5,}/)
+
     }
 
     def "sendNotification dispatches a placeholder-free template when the request omits templateVariables"() {

@@ -120,9 +120,8 @@ public class NotificationService {
             if (subjectTemplate != null) {
                 subject = templateService.resolveTemplate(subjectTemplate, templateVariables);
             }
-        } catch (Exception e) {
-            throw new TemplateNotResolved("Failed to resolve template: " + template
-                    + " with variables: " + templateVariables.keySet());
+        } catch (IllegalArgumentException e) {
+            throw new TemplateNotResolved("Failed to resolve template " + template.getId() + ": " + e.getMessage());
         }
 
         // get the notification action for this channel
